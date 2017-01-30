@@ -1,3 +1,6 @@
+//Henry Crute
+//EE382V CGO
+
 #include "IRPrinter.h"
 #include <iostream>
 #include <typeinfo>
@@ -14,7 +17,7 @@ using namespace std;
 bool IRPrinter::runOnModule(Module& M)
 {
 	// Remove the following line and before you write down your own codes
-	M.print(outs(), nullptr);
+	//M.print(outs(), nullptr);
 	
 	//function signature, including function name, return type and arguments
 	
@@ -22,8 +25,13 @@ bool IRPrinter::runOnModule(Module& M)
 		//func.dump();
 		
 		//figure out of it is declared or defined
-		cout << "#####declare " << flush;
+		if (func.isDeclaration()) {
+			cout << "declare " << flush;
+		} else {
+			cout << "define " << flush;
+		}
 		
+		//print return type as well as name, and arg list
 		func.getReturnType()->print(outs(), false);
 		cout << " @" << func.getName().str() << flush;
 		cout << '(' << flush;
@@ -32,16 +40,16 @@ bool IRPrinter::runOnModule(Module& M)
 			cout << ", " << flush;
 		}
 		cout << ')' << flush;
+		cout << "\n\n" << flush;
 		
-		cout << '\n' << flush;
-		
+		//loop over blocks in the function
 		for (auto& B: func.getBasicBlockList()) {
 			cout << "; <label>:" << flush;
 			B.printAsOperand(outs(), false);
 			cout << ":\n" << flush;
 			
+			//loop over instructions in the block
 			for (auto& I: B.getInstList()) {
-				
 				if (DebugLoc Loc = I.getDebugLoc()) {
 					cout << "line " << flush;
 					unsigned Line = Loc.getLine();
@@ -53,6 +61,8 @@ bool IRPrinter::runOnModule(Module& M)
 				I.print(outs());
 				cout << '\n' << flush;
 			}
+			
+			cout << "\n" << flush;
 		}
 	}
 	
