@@ -1,0 +1,28 @@
+# A basic script for booting an existing Simics image
+$script_dir = (resolve-file -query "%script%")
+
+# Configure the machine
+$num_cpus = 1
+$num_cores = 2
+$num_threads = 1
+$memory_megs = 1024
+$disk_image = $script_dir + "/../disk_images/centos68.craff"
+
+# Specify the size of the virtual disk
+$disk_size = (20 * 1024 * 1024 * 1024) # 20 GB
+
+run-command-file "%simics%/targets/x86-x58-ich10/viper-fedora-14.simics"
+
+local $con = $host_name.console.con
+local $vga = $host_name.mb.gpu.vga
+
+script-branch {
+    $vga.wait-for-string "dhcp0 login: "
+    $con.input "root\n"
+    $vga.wait-for-string "Password:"
+    $con.input "simics\n"
+}
+
+# Run
+enable-real-time-mode
+run

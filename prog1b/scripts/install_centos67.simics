@@ -1,0 +1,25 @@
+# A basic installation script, preconfigured for installing CentOS 6.7
+$cpu_class = "core-i7-single"
+$script_dir = (resolve-file -query "%script%")
+
+# Specify the installation medium
+$iso_image = $script_dir +  "/../isos/CentOS-6.7-x86_64-minimal.iso"
+
+# Specify the size of the virtual disk
+$disk_size = (20 * 1024 * 1024 * 1024) # 20 GB
+
+# 
+run-command-file "%simics%/targets/x86-x58-ich10/viper-dvdboot.simics"
+
+# Convenience settings
+enable-real-time-mode
+
+script-branch {
+    (current-processor).wait-for-time 1.0 -relative
+    $console.con.input "\t"
+    (current-processor).wait-for-time 0.1 -relative
+    $console.con.input " text\n"
+}
+
+# Run
+run
