@@ -3,7 +3,7 @@
 # Run: ./run.sh simpleloop
 
 mkdir -p ready
-make clean && make
+make clean CXX=clang && make CXX=clang
 clang++ test/$1.cc -I. -c -emit-llvm -O0
 opt -dce -mem2reg -break-crit-edges -loop-simplify $1.bc -o ready/$1.bc
 

@@ -35,6 +35,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	// CallInst *call = CallInst::Create(...);
 	// call->insertBefore(???->getFirstNonPHI());
 	// call->insertBefore(latch->getTerminator());
+	return false;
 }
 
 void InstrumentPass::getAnalysisUsage(AnalysisUsage &AU) const
@@ -43,6 +44,7 @@ void InstrumentPass::getAnalysisUsage(AnalysisUsage &AU) const
 	// AU.addRequired<DominatorTreeWrapperPass>();
 	// AU.addRequiredTransitive<DominatorTreeWrapperPass>();
 	AU.setPreservesCFG();
+	return;
 }
 
 char InstrumentPass::ID = 0;
