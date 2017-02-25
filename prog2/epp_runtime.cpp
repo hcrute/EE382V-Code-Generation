@@ -9,7 +9,18 @@ using namespace std;
 
 //initialize 
 //inserted into simpleloop.cc
+
 void init_path_reg(int loopId) {
+	/* 
+	 * ws.add(entry);
+	 * while not ws.empty() {
+	 * vertex v = ws.remove();
+	 * for each edge e = v->w
+	 * 	if e is a chord edge
+	 * 		instrument(e, 'r=Inc(e)');
+	 * 	else if e is the only incoming edge of w
+	 *		ws.add(w);
+	 * 	else instrument(e, 'r=0'*/
 	return;
 }
 
