@@ -25,6 +25,8 @@ using namespace std;
 
 static map<uint64_t, map<uint64_t, uint64_t>> path_counts;
 
+//static map<
+
 static uint64_t loop_id = 1;
 
 bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
@@ -41,9 +43,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 		return false;
 	}*/
 	
-	DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-	//gets the loop header as a dominator tree?
-	DomTreeNode *node = domTree.getNode(loop->getHeader());
+	
 	
 	// FunctionType *FunTy = FunctionType::get( Type::getVoidTy( MP->getContext() ), ... );
 	// Function *Function = dyn_cast<Function> ( MP->getOrInsertFunction(...) );
@@ -72,8 +72,30 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 		cout << "okay!!!!!!!!!!!!!!!!..." << endl;
 	}*/
 	
-	for (auto& B: loop->blocks()) {
-		B->print(outs(), 0);
+	DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+	//gets the loop header as a dominator tree?
+	DomTreeNode *node = domTree.getNode(loop->getHeader());
+	
+	//how many paths there are for a certain vertex
+	map<uint64_t, uint64_t> num_paths;
+	uint32_t i = 0;
+	//entry node is loop header
+	//exit node is loop latch
+	
+	//assign values to edges in DAG
+	for (auto Iter = loop->block_begin(), End = loop->block_end();
+			Iter != End; Iter++, i++) {
+		//(*Iter)->print(outs(), 0);
+		//if v is a leaf vertex
+		if (*Iter == loop->getLoopLatch()) {
+			cout << "we are at the latch\n";
+			num_paths[i] = 1;
+		} else {
+			cout << "not latch\n";
+			num_paths[i] = 0;
+			(*Iter)->print(outs(), 0);
+		}
+		
 	}
 	
 	
@@ -81,18 +103,18 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	
 	LoopInfoBase< BasicBlock, Loop >::iterator loopInfo_begin;
 	
-	for (loopInfo_begin = loopInfo.begin();
+	/*for (loopInfo_begin = loopInfo.begin();
 			loopInfo_begin != loopInfo.end();
 			loopInfo_begin++) {
 		cout << "alright........ " << endl;		
-	}
+	}*/
 	
 	//cout <<  "please print" << loop->getNumBlocks() << endl;
 	
 	//print loop info
-	loopInfo.print(outs());
+	//loopInfo.print(outs());
 	//dump this loop info
-	loop->print(outs(), 0);
+	//loop->print(outs(), 0);
 	
 	return false;
 }
