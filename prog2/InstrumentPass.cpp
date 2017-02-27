@@ -69,120 +69,99 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	cout << "this is loop number " << loop_id << endl << flush;
 	loop_id++;
 	
-	/*LoopBase< BasicBlock, Loop>::iterator loop_begin;
-	
-	for (loop_begin = loop->begin();
-			loop_begin != loop->end();
-			loop_begin++) {
-		cout << "okay!!!!!!!!!!!!!!!!..." << endl;
-	}*/
 	
 	DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 	DomTreeNode *node = domTree.getNode(loop->getLoopLatch());
-	//node->getBlock()->print(outs(), 0);
+
 	
-	//how many paths there are for a certain vertex
-	
-	uint32_t i = 0;
-	//entry node is loop header
-	//exit node is loop latch
-	
-	
-	
-	for (auto it_node = domTree.getNode(loop->getLoopLatch()),
+	/*for (auto it_node = domTree.getNode(loop->getLoopLatch()),
 			  it_head = domTree.getNode(loop->getHeader());
 			  it_node != it_head; ) {
 		break;
-	}
+	}*/
 	
 	map<BasicBlock *, vector<BasicBlock *>> block_preds;
 	map<BasicBlock *, vector<BasicBlock *>> edges;
-	//assign values to edges in DAG
 	for (auto Iter = loop->block_begin(), End = loop->block_end();
-			Iter != End; Iter++, i++) {
+			Iter != End; Iter++) {
 		const TerminatorInst *TInst = (*Iter)->getTerminator();
 		//(*Iter)->print(outs(), 0);
 		//cout << "Successors!\n";
-		for (unsigned i = 0, NSucc = TInst->getNumSuccessors(); i < NSucc; i++) {
+		for (unsigned int i = 0, NSucc = TInst->getNumSuccessors(); i < NSucc; i++) {
 			BasicBlock *Succ = TInst->getSuccessor(i);
 			//Succ->print(outs(), 0);
-			block_preds[Succ].push_back(*Iter);
-			edges[*Iter].push_back(Succ);
-		}
-	}
-	
-	
-	vector<BasicBlock *> reverse_top;
-	vector<BasicBlock *> visited_blocks;
-	
-	BasicBlock *prevNode = NULL;
-	unsigned total_preds = 0;
-	unsigned curr_preds = 0;
-	//Kahn's algorithm
-	vector<BasicBlock *> myNodes;
-	myNodes.push_back(loop->getHeader());
-	while (myNodes.size() > 0) {
-		BasicBlock *node = myNodes.back();
-		myNodes.pop_back();
-		reverse_top.push_back(node);
-		
-		
-		node->printAsOperand(outs(), 0);
-		
-		const TerminatorInst *TInst = reverse_top.back()->getTerminator();
-		for (unsigned i = 0, NSucc = TInst->getNumSuccessors(); i < NSucc; i++) {
-			BasicBlock *Succ = TInst->getSuccessor(i);
+			//if the block successor is in the loop we care about it
 			if (find(loop->blocks().begin(), loop->blocks().end(), Succ) != loop->blocks().end()) {
-				edges[node].erase(find(edges[node].begin(),
-								   edges[node].end(), Succ), 
-								   edges[node].end());
-				if (edges[node].size() == 0) {
-					myNodes.insert(myNodes.begin(), Succ);
-				}
-			} else {
-				cout << "couldn't find\n";
+				block_preds[Succ].push_back(*Iter);
+				edges[*Iter].push_back(Succ);
 			}
 		}
-		
-		if (myNodes.back() == loop->getLoopLatch()) {
-			reverse_top.push_back(loop->getLoopLatch());
-			break;
-		}
 	}
+
 	
-	for (auto Iter = reverse_top.begin(); Iter != reverse_top.end(); Iter++) {
-		(*Iter)->printAsOperand(outs(), 0);
-	}
-	cout << "size of the ordering is " << reverse_top.size() << endl;
-	
-	
-	
-	/*for (auto Iter = block_preds.begin(); Iter != block_preds.end(); Iter++) {
+	/*for (auto Iter = edges.begin(); Iter != edges.end(); Iter++) {
 		cout << "block number " << flush;
-		Iter->first->printAsOperand(outs(), 0);
+		Iter->first->print(outs(), 0);
 		cout << endl << flush;
 		
 		auto it = Iter->second.begin();
 		unsigned i = 0;
 		while (it != Iter->second.end()) {
-			(*it)->print(outs(), 0);
+			(*it)->printAsOperand(outs(), 0);
 			it++;
 			i++;
 		}
 	}*/
 	
 	
-	//loop->print(outs(), 0);
+	vector<BasicBlock *> topo_order;
 	
-	LoopInfoBase< BasicBlock, Loop >::iterator loopInfo_begin;
+	//Kahn's toplogilical sorting algorithm
+	vector<BasicBlock *> myNodes;
+	myNodes.push_back(loop->getHeader());
+	while (!myNodes.empty()) {
+		//remove node n and add n to tail
+		BasicBlock *nodeN = myNodes.back();
+		myNodes.pop_back();
+		topo_order.push_back(nodeN);
+		//make copy of vector list
+		for (auto nodeM = edges[nodeN].begin();
+			      nodeM != edges[nodeN].end(); nodeM++) {
+			//remove edge e from n to m in the pred
+			//edges[node].back()->printAsOperand(outs(), 0);
+			block_preds[*nodeM].erase(remove(block_preds[*nodeM].begin(),
+										  block_preds[*nodeM].end(), nodeN), 
+								   block_preds[*nodeM].end());
+
+			if (block_preds[*nodeM].empty()) {
+				//cout << "size of this node equals zero\n";
+				//node->printAsOperand(outs(), 0);
+				myNodes.insert(myNodes.begin(), *nodeM);
+			} else {
+				//edges[node][0]->printAsOperand(outs(), 0);
+				//cout << "not!\n";
+			}
+			//(*it)->printAsOperand(outs(), 0);
+		}
+		
+		if (myNodes.back() == loop->getLoopLatch()) {
+			topo_order.push_back(loop->getLoopLatch());
+			break;
+		}
+	}
 	
-	/*for (loopInfo_begin = loopInfo.begin();
-			loopInfo_begin != loopInfo.end();
-			loopInfo_begin++) {
-		cout << "alright........ " << endl;		
-	}*/
+	for (auto Iter = topo_order.begin(); Iter != topo_order.end(); Iter++) {
+		(*Iter)->printAsOperand(outs(), 0);
+	}
 	
-	cout <<  "total number of blocks = " << loop->getNumBlocks() << endl << flush;
+	
+	//assign values to edges in DAG
+	
+	
+	//LoopInfoBase< BasicBlock, Loop >::iterator loopInfo_begin;
+	
+	//cout << "size of the ordering is " << topo_order.size() << endl;
+	//cout <<  "total number of blocks = " << loop->getNumBlocks() << endl << flush;
 	
 	//print loop info
 	//loopInfo.print(outs());
