@@ -15,6 +15,7 @@
 #include <stack>
 #include <unordered_set>
 #include <unordered_map>
+#include <algorithm>
 
 #include <iostream>
 
@@ -28,6 +29,10 @@ static map<uint64_t, map<uint64_t, uint64_t>> path_counts;
 //static map<
 
 static uint64_t loop_id = 1;
+
+void visit() {
+	return;
+}
 
 bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 {
@@ -91,6 +96,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	}
 	
 	map<BasicBlock *, vector<BasicBlock *>> block_preds;
+	map<BasicBlock *, vector<BasicBlock *>> edges;
 	//assign values to edges in DAG
 	for (auto Iter = loop->block_begin(), End = loop->block_end();
 			Iter != End; Iter++, i++) {
@@ -101,33 +107,57 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			BasicBlock *Succ = TInst->getSuccessor(i);
 			//Succ->print(outs(), 0);
 			block_preds[Succ].push_back(*Iter);
+			edges[*Iter].push_back(Succ);
 		}
 	}
 	
-	vector<BasicBloc *> reverse_top;
-	while (visited_blocks.size() != loop->getNumBlocks()) {
-		
-	}
 	
-	
-	/*loop through constructed predecessor tree */
-	map<BasicBlock *, uint64_t> num_paths;
+	vector<BasicBlock *> reverse_top;
 	vector<BasicBlock *> visited_blocks;
-	BasicBlock *myNode = Loop->getLoopLatch();
-	while (visited_blocks.size() != loop->getNumBlocks()) {
-		if (myNode == Loop->getLoopLatch()) {
-			num_paths[myNode] = 1;
-		} else {
-			num_paths[myNode] = 0;
-			for (auto it = block_preds[myNode].begin();
-					it != block_preds[myNode].end(); it++) {
-				;
+	
+	BasicBlock *prevNode = NULL;
+	unsigned total_preds = 0;
+	unsigned curr_preds = 0;
+	//Kahn's algorithm
+	vector<BasicBlock *> myNodes;
+	myNodes.push_back(loop->getHeader());
+	while (myNodes.size() > 0) {
+		BasicBlock *node = myNodes.back();
+		myNodes.pop_back();
+		reverse_top.push_back(node);
+		
+		
+		node->printAsOperand(outs(), 0);
+		
+		const TerminatorInst *TInst = reverse_top.back()->getTerminator();
+		for (unsigned i = 0, NSucc = TInst->getNumSuccessors(); i < NSucc; i++) {
+			BasicBlock *Succ = TInst->getSuccessor(i);
+			if (find(loop->blocks().begin(), loop->blocks().end(), Succ) != loop->blocks().end()) {
+				edges[node].erase(find(edges[node].begin(),
+								   edges[node].end(), Succ), 
+								   edges[node].end());
+				if (edges[node].size() == 0) {
+					myNodes.insert(myNodes.begin(), Succ);
+				}
+			} else {
+				cout << "couldn't find\n";
 			}
 		}
-		visited_blocks.push_back(myNode);
+		
+		if (myNodes.back() == loop->getLoopLatch()) {
+			reverse_top.push_back(loop->getLoopLatch());
+			break;
+		}
 	}
 	
-	for (auto Iter = block_preds.begin(); Iter != block_preds.end(); Iter++) {
+	for (auto Iter = reverse_top.begin(); Iter != reverse_top.end(); Iter++) {
+		(*Iter)->printAsOperand(outs(), 0);
+	}
+	cout << "size of the ordering is " << reverse_top.size() << endl;
+	
+	
+	
+	/*for (auto Iter = block_preds.begin(); Iter != block_preds.end(); Iter++) {
 		cout << "block number " << flush;
 		Iter->first->printAsOperand(outs(), 0);
 		cout << endl << flush;
@@ -139,7 +169,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			it++;
 			i++;
 		}
-	}
+	}*/
 	
 	
 	//loop->print(outs(), 0);
