@@ -61,7 +61,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	//determine paths in loop
 	
 	//loopID->printAsOperand(outs(), 0);
-	cout << "this is loop number " << loop_id << endl;
+	cout << "this is loop number " << loop_id << endl << flush;
 	loop_id++;
 	
 	/*LoopBase< BasicBlock, Loop>::iterator loop_begin;
@@ -73,33 +73,76 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	}*/
 	
 	DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-	//gets the loop header as a dominator tree?
-	DomTreeNode *node = domTree.getNode(loop->getHeader());
+	DomTreeNode *node = domTree.getNode(loop->getLoopLatch());
+	//node->getBlock()->print(outs(), 0);
 	
 	//how many paths there are for a certain vertex
-	map<uint64_t, uint64_t> num_paths;
+	
 	uint32_t i = 0;
 	//entry node is loop header
 	//exit node is loop latch
 	
+	
+	
+	for (auto it_node = domTree.getNode(loop->getLoopLatch()),
+			  it_head = domTree.getNode(loop->getHeader());
+			  it_node != it_head; ) {
+		break;
+	}
+	
+	map<BasicBlock *, vector<BasicBlock *>> block_preds;
 	//assign values to edges in DAG
 	for (auto Iter = loop->block_begin(), End = loop->block_end();
 			Iter != End; Iter++, i++) {
+		const TerminatorInst *TInst = (*Iter)->getTerminator();
 		//(*Iter)->print(outs(), 0);
-		//if v is a leaf vertex
-		if (*Iter == loop->getLoopLatch()) {
-			cout << "we are at the latch\n";
-			num_paths[i] = 1;
-		} else {
-			cout << "not latch\n";
-			num_paths[i] = 0;
-			(*Iter)->print(outs(), 0);
+		//cout << "Successors!\n";
+		for (unsigned i = 0, NSucc = TInst->getNumSuccessors(); i < NSucc; i++) {
+			BasicBlock *Succ = TInst->getSuccessor(i);
+			//Succ->print(outs(), 0);
+			block_preds[Succ].push_back(*Iter);
 		}
+	}
+	
+	vector<BasicBloc *> reverse_top;
+	while (visited_blocks.size() != loop->getNumBlocks()) {
 		
 	}
 	
 	
-	//loopHeader->print(outs(), 0);
+	/*loop through constructed predecessor tree */
+	map<BasicBlock *, uint64_t> num_paths;
+	vector<BasicBlock *> visited_blocks;
+	BasicBlock *myNode = Loop->getLoopLatch();
+	while (visited_blocks.size() != loop->getNumBlocks()) {
+		if (myNode == Loop->getLoopLatch()) {
+			num_paths[myNode] = 1;
+		} else {
+			num_paths[myNode] = 0;
+			for (auto it = block_preds[myNode].begin();
+					it != block_preds[myNode].end(); it++) {
+				;
+			}
+		}
+		visited_blocks.push_back(myNode);
+	}
+	
+	for (auto Iter = block_preds.begin(); Iter != block_preds.end(); Iter++) {
+		cout << "block number " << flush;
+		Iter->first->printAsOperand(outs(), 0);
+		cout << endl << flush;
+		
+		auto it = Iter->second.begin();
+		unsigned i = 0;
+		while (it != Iter->second.end()) {
+			(*it)->print(outs(), 0);
+			it++;
+			i++;
+		}
+	}
+	
+	
+	//loop->print(outs(), 0);
 	
 	LoopInfoBase< BasicBlock, Loop >::iterator loopInfo_begin;
 	
@@ -109,7 +152,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 		cout << "alright........ " << endl;		
 	}*/
 	
-	//cout <<  "please print" << loop->getNumBlocks() << endl;
+	cout <<  "total number of blocks = " << loop->getNumBlocks() << endl << flush;
 	
 	//print loop info
 	//loopInfo.print(outs());
