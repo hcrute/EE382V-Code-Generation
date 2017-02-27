@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <algorithm>
+#include <utility>
 
 #include <iostream>
 
@@ -48,16 +49,6 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 		return false;
 	}*/
 	
-	
-	
-	// FunctionType *FunTy = FunctionType::get( Type::getVoidTy( MP->getContext() ), ... );
-	// Function *Function = dyn_cast<Function> ( MP->getOrInsertFunction(...) );
-	// APInt LoopId(...);
-	// Value *init_arg_values[] = { Constant::getIntegerValue(...), ... };
-	// CallInst *call = CallInst::Create(...);
-	// call->insertBefore(???->getFirstNonPHI());
-	// call->insertBefore(latch->getTerminator());
-	
 	/*MDNode *loopID = loop->getLoopID();
 	if (loopID == 0) {
 		cout << "what the fuck" << endl;
@@ -81,7 +72,8 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	}*/
 	
 	map<BasicBlock *, vector<BasicBlock *>> block_preds;
-	map<BasicBlock *, vector<BasicBlock *>> edges;
+	//edges are a map of a block with outgoing edges in a vector with weight values on them
+	map<BasicBlock *, vector<pair<BasicBlock *, uint32_t>>> edges;
 	for (auto Iter = loop->block_begin(), End = loop->block_end();
 			Iter != End; Iter++) {
 		const TerminatorInst *TInst = (*Iter)->getTerminator();
@@ -93,25 +85,10 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			//if the block successor is in the loop we care about it
 			if (find(loop->blocks().begin(), loop->blocks().end(), Succ) != loop->blocks().end()) {
 				block_preds[Succ].push_back(*Iter);
-				edges[*Iter].push_back(Succ);
+				edges[*Iter].push_back(make_pair(Succ, 0));
 			}
 		}
 	}
-
-	
-	/*for (auto Iter = edges.begin(); Iter != edges.end(); Iter++) {
-		cout << "block number " << flush;
-		Iter->first->print(outs(), 0);
-		cout << endl << flush;
-		
-		auto it = Iter->second.begin();
-		unsigned i = 0;
-		while (it != Iter->second.end()) {
-			(*it)->printAsOperand(outs(), 0);
-			it++;
-			i++;
-		}
-	}*/
 	
 	
 	vector<BasicBlock *> topo_order;
@@ -129,34 +106,72 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			      nodeM != edges[nodeN].end(); nodeM++) {
 			//remove edge e from n to m in the pred
 			//edges[node].back()->printAsOperand(outs(), 0);
-			block_preds[*nodeM].erase(remove(block_preds[*nodeM].begin(),
-										  block_preds[*nodeM].end(), nodeN), 
-								   block_preds[*nodeM].end());
+			block_preds[(*nodeM).first].erase(remove(block_preds[(*nodeM).first].begin(),
+								block_preds[(*nodeM).first].end(), nodeN), 
+								block_preds[(*nodeM).first].end());
 
-			if (block_preds[*nodeM].empty()) {
+			if (block_preds[(*nodeM).first].empty()) {
 				//cout << "size of this node equals zero\n";
 				//node->printAsOperand(outs(), 0);
-				myNodes.insert(myNodes.begin(), *nodeM);
-			} else {
-				//edges[node][0]->printAsOperand(outs(), 0);
-				//cout << "not!\n";
+				myNodes.insert(myNodes.begin(), (*nodeM).first);
 			}
-			//(*it)->printAsOperand(outs(), 0);
 		}
 		
+		//if we get to the loop latch we should break
 		if (myNodes.back() == loop->getLoopLatch()) {
 			topo_order.push_back(loop->getLoopLatch());
 			break;
 		}
 	}
 	
-	for (auto Iter = topo_order.begin(); Iter != topo_order.end(); Iter++) {
-		(*Iter)->printAsOperand(outs(), 0);
-	}
-	
-	
 	//assign values to edges in DAG
 	
+	map<BasicBlock *, uint32_t> NumPaths;
+	//loop reverse topological order
+	for (unsigned i = topo_order.size(); i-- > 0; ) {
+		//cout << "vertex is bb \n" << flush;
+		//topo_order[i]->printAsOperand(outs(), 0);
+		if (topo_order[i] == loop->getLoopLatch()) {
+			NumPaths[topo_order[i]] = 1;
+		} else {
+			NumPaths[topo_order[i]] = 0;
+			//for each edge
+			for (auto edge = edges[topo_order[i]].begin();
+			          edge != edges[topo_order[i]].end(); edge++) {
+						  
+				//(*edge).first->printAsOperand(outs(), 0);
+				
+				(*edge).second = NumPaths[topo_order[i]];
+				//cout << "edge = " << (*edge).second << endl << flush;
+				NumPaths[topo_order[i]] = NumPaths[topo_order[i]] + NumPaths[(*edge).first];
+			}
+		}
+	}
+	
+	/*for (auto Iter = edges.begin(); Iter != edges.end(); Iter++) {
+		cout << "block number " << flush;
+		Iter->first->print(outs(), 0);
+		cout << endl << flush;
+		
+		auto it = Iter->second.begin();
+		unsigned i = 0;
+		while (it != Iter->second.end()) {
+			(*it).first->printAsOperand(outs(), 0);
+			cout << "has a value of " << (*it).second << endl << flush;
+			it++;
+			i++;
+		}
+	}*/
+	
+	
+	
+	// FunctionType *FunTy = FunctionType::get( Type::getVoidTy( MP->getContext() ), ... );
+	// Function *Function = dyn_cast<Function> ( MP->getOrInsertFunction(...) );
+	// APInt LoopId(...);
+	// Value *init_arg_values[] = { Constant::getIntegerValue(...), ... };
+	// CallInst *call = CallInst::Create(...);
+	// call->insertBefore(???->getFirstNonPHI());
+	// call->insertBefore(latch->getTerminator());
 	
 	//LoopInfoBase< BasicBlock, Loop >::iterator loopInfo_begin;
 	
