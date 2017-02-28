@@ -4,42 +4,50 @@
 #include "epp_runtime.h"
 
 #include <iostream>
+#include <map>
 
 using namespace std;
 
 //initialize 
 //inserted into simpleloop.cc
 
+map<int, uint32_t>regs;
+map<int, map<uint32_t, uint32_t>>path_counts;
+
 void init_path_reg(int loopId) {
-	/* 
-	 * ws.add(entry);
-	 * while not ws.empty() {
-	 * vertex v = ws.remove();
-	 * for each edge e = v->w
-	 * 	if e is a chord edge
-	 * 		instrument(e, 'r=Inc(e)');
-	 * 	else if e is the only incoming edge of w
-	 *		ws.add(w);
-	 * 	else instrument(e, 'r=0'*/
+	cout << "loop id is " << loopId << endl;
+	regs[loopId] = 0;
 	return;
 }
 
-//increment
+//increment register
 //inserted into simpleloop.cc
 void inc_path_reg(int loopId, int val) {
+	regs[loopId] += val;
 	return;
 }
 
-//???
+//add path count
 //inserted into simpleloop.cc
 void finalize_path_reg(int loopId) {
+	path_counts[loopId][regs[loopId]]++;
 	return;
 }
 
-//dump current data structure
+//dump map
 //called from simpleloop.cc
 void dump_path_regs() {
 	cout << "Hello World\n";
+	//path_counts[1][10] = 0;
+	//path_counts[1][1] = 1;
+	//loop through map
+	for (auto loop = path_counts.begin(); loop != path_counts.end(); loop++) {
+		for (auto path = (*loop).second.begin(); path != (*loop).second.end(); path++) {
+			//cout << "path = " << (*path).first;
+			cout << "loop: " << (*loop).first <<
+					"\t path: " << (*path).first << "\t count: " << (*path).second << endl;
+		}
+	}
 	return;
 }
 
