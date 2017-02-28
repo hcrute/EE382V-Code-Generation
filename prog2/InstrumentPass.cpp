@@ -24,41 +24,46 @@ using namespace ee382v;
 using namespace llvm;
 using namespace std;
 
-
-static map<uint64_t, map<uint64_t, uint64_t>> path_counts;
-
 //static map<
 
-static uint64_t loop_id = 1;
+static int loop_id = 1;
 
-void visit() {
-	return;
+CallInst *getCallInstruction(string func_name, vector<int> values,
+			LLVMContext &func_context, Module *module_pointer) {
+	Type *result = Type::getVoidTy(func_context);
+	vector <Type *>arr;
+	arr.push_back(Type::getInt32Ty(func_context));
+	ArrayRef<Type *> args(arr);
+	
+	FunctionType *type = FunctionType::get(result, args, false);
+	Function *init_func = dyn_cast<Function>(module_pointer->getOrInsertFunction(
+				StringRef(func_name), type));
+	APInt local_loop(32, loop_id, true);
+	Value *init_arg_values[] = {Constant::getIntegerValue(
+					Type::getInt32Ty(func_context), local_loop)};
+	CallInst *call = CallInst::Create(init_func, init_arg_values);
+	return call;
 }
 
 bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 {
-	// Write your CODE Here
-	// I intentionally kept some code here so that you can know some APIs to call
-	// Delete them if you find them annoying :)
-	
-	
-	// MAKE SURE IT IS THE INNER MOST LOOP?
+	// MAKE SURE IT IS THE INNER MOST LOOP
 	LoopInfo& loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+	//loop through all loops?
+	for (auto it = loopInfo.begin(); it != loopInfo.end(); it++) {
+		//check to see if the current loop is inside of another loop
+		//return false if that is the case
+		if (!LoopInfo::isNotAlreadyContainedIn(loop, *it)) {
+			cout << "loop number " << loop_id << " is a parent loop";
+			return false;
+		}
+	}
 	/*if (loopInfo.getLoopDepth() != 1) {
 		cout << "this loop is not at depth 1" << endl;
 		return false;
 	}*/
 	
-	/*MDNode *loopID = loop->getLoopID();
-	if (loopID == 0) {
-		cout << "what the fuck" << endl;
-	}*/
-	
-	//determine paths in loop
-	
-	//loopID->printAsOperand(outs(), 0);
 	cout << "this is loop number " << loop_id << endl << flush;
-	loop_id++;
 	
 	
 	DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -70,6 +75,9 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			  it_node != it_head; ) {
 		break;
 	}*/
+	
+	vector<BasicBlock *> terminators;
+	terminators.push_back(loop->getLoopLatch());
 	
 	map<BasicBlock *, vector<BasicBlock *>> block_preds;
 	//edges are a map of a block with outgoing edges in a vector with weight values on them
@@ -138,7 +146,6 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			//for each edge
 			for (auto edge = edges[topo_order[i]].begin();
 			          edge != edges[topo_order[i]].end(); edge++) {
-						  
 				//(*edge).first->printAsOperand(outs(), 0);
 				
 				(*edge).second = NumPaths[topo_order[i]];
@@ -147,6 +154,47 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			}
 		}
 	}
+	
+	
+	//terminators for exits
+	//insert instrumentation into code
+	Module *module_pointer = loop->getHeader()->getParent()->getParent();
+	LLVMContext &func_context = loop->getHeader()->getParent()->getContext();
+	
+	
+	
+	//iterate topologically
+	for (auto it = topo_order.begin(); it != topo_order.end(); it++) {
+		CallInst *instruction;
+		//iterate through each edge from that block
+		for (auto edge = edges[*it].begin(); edge != edges[*it].end(); edge++) {
+			;
+		}
+		//if we are at the beginning node, insert an init path reg
+		if (*it == loop->getHeader()) {
+			instruction = getCallInstruction("init_path_reg",
+					vector<int>{0}, func_context, module_pointer);
+			instruction->insertBefore((*it)->getFirstNonPHI());
+		} else if (*it == loop->getLoopLatch()) {
+			//if we are at the end node, insert a finalize
+			instruction = getCallInstruction("finalize_path_reg",
+					vector<int>{0}, func_context, module_pointer);
+			instruction->insertBefore((*it)->getFirstNonPHI());;
+		} else {
+			//regular block
+			;
+		}
+		
+		
+	}
+	
+	// FunctionType *FunTy = FunctionType::get( Type::getVoidTy( MP->getContext() ), ... );
+	// Function *Function = dyn_cast<Function> ( MP->getOrInsertFunction(...) );
+	// APInt LoopId(...);
+	// Value *init_arg_values[] = { Constant::getIntegerValue(...), ... };
+	// CallInst *call = CallInst::Create(...);
+	// call->insertBefore(???->getFirstNonPHI());
+	// call->insertBefore(latch->getTerminator());
 	
 	/*for (auto Iter = edges.begin(); Iter != edges.end(); Iter++) {
 		cout << "block number " << flush;
@@ -165,13 +213,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	
 	
 	
-	// FunctionType *FunTy = FunctionType::get( Type::getVoidTy( MP->getContext() ), ... );
-	// Function *Function = dyn_cast<Function> ( MP->getOrInsertFunction(...) );
-	// APInt LoopId(...);
-	// Value *init_arg_values[] = { Constant::getIntegerValue(...), ... };
-	// CallInst *call = CallInst::Create(...);
-	// call->insertBefore(???->getFirstNonPHI());
-	// call->insertBefore(latch->getTerminator());
+	
 	
 	//LoopInfoBase< BasicBlock, Loop >::iterator loopInfo_begin;
 	
@@ -182,8 +224,8 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	//loopInfo.print(outs());
 	//dump this loop info
 	//loop->print(outs(), 0);
-	
-	return false;
+	loop_id++;
+	return true;
 }
 
 void InstrumentPass::getAnalysisUsage(AnalysisUsage &AU) const
