@@ -15,7 +15,7 @@ map<int, uint32_t>regs;
 map<int, map<uint32_t, uint32_t>>path_counts;
 
 void init_path_reg(int loopId) {
-	cout << "loop id is " << loopId << endl;
+	//cout << "loop id is " << loopId << endl;
 	regs[loopId] = 0;
 	return;
 }
@@ -37,7 +37,6 @@ void finalize_path_reg(int loopId) {
 //dump map
 //called from simpleloop.cc
 void dump_path_regs() {
-	cout << "Hello World\n";
 	//path_counts[1][10] = 0;
 	//path_counts[1][1] = 1;
 	//loop through map
