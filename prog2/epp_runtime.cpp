@@ -30,7 +30,9 @@ void inc_path_reg(int loopId, int val) {
 //add path count
 //inserted into simpleloop.cc
 void finalize_path_reg(int loopId) {
+	//cout << "reg = " << regs[loopId] << endl;
 	path_counts[loopId][regs[loopId]]++;
+	
 	return;
 }
 
@@ -47,6 +49,7 @@ void dump_path_regs() {
 					"\t path: " << (*path).first << "\t count: " << (*path).second << endl;
 		}
 	}
+	//cout << "this should exist " << path_counts[1][2] << endl;
 	return;
 }
 

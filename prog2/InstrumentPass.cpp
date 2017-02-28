@@ -65,12 +65,15 @@ CallInst *getCallInstruction(string func_name, vector<int> values,
 	return call;
 }
 
+//returns true if the basic block is in the exit blocks of the loop
 bool isExitBlock(Loop *loop, BasicBlock *block) {
 	SmallVector<BasicBlock *, 8> exitBBs;
 	loop->getExitBlocks(exitBBs);
-	
+	//block->printAsOperand(outs(), 0);
 	for (auto it = exitBBs.begin(); it != exitBBs.end(); it++) {
+		//(*it)->printAsOperand(outs(), 0);
 		if ((*it) == block) {
+			//cout << "what?" << endl;
 			return true;
 		}
 	}
@@ -187,6 +190,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 
 	//iterate topologically
 	for (auto it = topo_order.begin(); it != topo_order.end(); it++) {
+		//(*it)->printAsOperand(outs(), 0);
 		CallInst *instruction;
 		//if we are at the header
 		if (*it == loop->getHeader()) {
@@ -197,13 +201,18 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			//if we are at the end node, insert a finalize
 			instruction = getCallInstruction("finalize_path_reg",
 					vector<int>{loop_id}, func_context, module_pointer);
-			instruction->insertBefore((*it)->getTerminator());
+			instruction->insertBefore((*it)->getFirstNonPHI());
 		} else if (isExitBlock(loop, *it)) {
+			//cout << "we are at the exit block?\n";
 			//if we have an exit block, insert a finalize
+			
 			instruction = getCallInstruction("finalize_path_reg",
 					vector<int>{loop_id}, func_context, module_pointer);
-			instruction->insertBefore((*it)->getTerminator());
+			instruction->insertBefore((*it)->getFirstNonPHI());
+			(*it)->print(outs(), 0);
 		}
+		
+		//cout << "$$$$$$$$$$$$$$$" << isExitBlock(loop, *it) << endl;
 		
 		//iterate through each edge from that block
 		for (auto edge = edges[*it].begin(); edge != edges[*it].end(); edge++) {
@@ -221,6 +230,8 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 				instruction->insertBefore((*edge).first->getFirstNonPHI());
 			}
 		}
+		
+		
 	}
 	
 	
