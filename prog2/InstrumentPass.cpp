@@ -65,6 +65,35 @@ CallInst *getCallInstruction(string func_name, vector<int> values,
 	return call;
 }
 
+void print_DFS(map<BasicBlock *, vector<pair<BasicBlock *, int>>> *edges,
+			BasicBlock *node, map<BasicBlock *, bool> *discovered,
+			vector<BasicBlock *> *dfslist, int loopid, int pathid) {
+	//cout << "printDFS\n" << flush;
+	//node->printAsOperand(outs(), 0);
+	(*discovered)[node] = true;
+	dfslist->push_back(node);
+	for (auto edge = (*edges)[node].begin(); edge != (*edges)[node].end(); edge++) {
+		if ((*discovered)[(*edge).first] == false) {
+			print_DFS(edges, (*edge).first, discovered, dfslist,
+					loopid, pathid + (*edge).second);
+		}
+	}
+	//if we are at an exit node
+	if ((*edges)[node].empty()) {
+		cout << "loop: " << loopid << "\t path: " << pathid
+				<< "\t " << flush;
+		dfslist->front()->printAsOperand(outs(), 0);
+		for (auto path = dfslist->begin() + 1; path != dfslist->end(); path++) {
+			(*path)->printAsOperand(outs(), 0);
+			cout << "->" << flush;
+		}
+		cout << endl;
+	}
+	(*discovered)[dfslist->back()] = false;
+	dfslist->pop_back();
+	return;
+}
+
 //returns true if the basic block is in the exit blocks of the loop
 bool isExitBlock(Loop *loop, BasicBlock *block) {
 	SmallVector<BasicBlock *, 8> exitBBs;
@@ -90,10 +119,10 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 		return false;
 	}
 	
-	LoopInfo& loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+	//LoopInfo& loopInfo = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 	
-	DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-	DomTreeNode *node = domTree.getNode(loop->getLoopLatch());
+	//DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+	//DomTreeNode *node = domTree.getNode(loop->getLoopLatch());
 
 	
 	/*for (auto it_node = domTree.getNode(loop->getLoopLatch()),
@@ -118,16 +147,16 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 			//Succ->print(outs(), 0);
 			//if the block successor is in the loop we care about it
 			//if (find(loop->blocks().begin(), loop->blocks().end(), Succ) != loop->blocks().end()) {
-			block_preds[Succ].push_back(*Iter);
-			edges[*Iter].push_back(make_pair(Succ, 0));
+			if (*Iter != loop->getLoopLatch()) {
+				block_preds[Succ].push_back(*Iter);
+				edges[*Iter].push_back(make_pair(Succ, 0));
+			}
 			//}
 		}
 	}
 	
-	
-	vector<BasicBlock *> topo_order;
-	
 	//Kahn's toplogilical sorting algorithm
+	vector<BasicBlock *> topo_order;
 	vector<BasicBlock *> myNodes;
 	myNodes.push_back(loop->getHeader());
 	while (!myNodes.empty()) {
@@ -189,40 +218,41 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	
 
 	//iterate topologically
-	for (auto it = topo_order.begin(); it != topo_order.end(); it++) {
+	for (unsigned i = topo_order.size(); i-- > 0; ) {
+		BasicBlock *it = topo_order[i];
 		//(*it)->printAsOperand(outs(), 0);
 		CallInst *instruction;
 		//if we are at the header
-		if (*it == loop->getHeader()) {
+		if (it == loop->getHeader()) {
 			instruction = getCallInstruction("init_path_reg",
 					vector<int>{loop_id}, func_context, module_pointer);
-			instruction->insertBefore((*it)->getFirstNonPHI());
-		} else if (*it == loop->getLoopLatch()) {
+			instruction->insertBefore((it)->getFirstNonPHI());
+		} else if (it == loop->getLoopLatch()) {
 			//if we are at the end node, insert a finalize
 			instruction = getCallInstruction("finalize_path_reg",
 					vector<int>{loop_id}, func_context, module_pointer);
-			instruction->insertBefore((*it)->getFirstNonPHI());
-		} else if (isExitBlock(loop, *it)) {
+			instruction->insertBefore((it)->getFirstNonPHI());
+		} else if (isExitBlock(loop, it)) {
 			//cout << "we are at the exit block?\n";
 			//if we have an exit block, insert a finalize
 			
 			instruction = getCallInstruction("finalize_path_reg",
 					vector<int>{loop_id}, func_context, module_pointer);
-			instruction->insertBefore((*it)->getFirstNonPHI());
-			(*it)->print(outs(), 0);
+			instruction->insertBefore((it)->getFirstNonPHI());
+			//(it)->print(outs(), 0);
 		}
 		
 		//cout << "$$$$$$$$$$$$$$$" << isExitBlock(loop, *it) << endl;
 		
 		//iterate through each edge from that block
-		for (auto edge = edges[*it].begin(); edge != edges[*it].end(); edge++) {
+		for (auto edge = edges[it].begin(); edge != edges[it].end(); edge++) {
 			//if there is one outgoing edge we put the instrumentation at the end
 			//of the current basic block
-			if ((edges[*it].size() == 1) && ((*edge).second > 0)) {
+			if ((edges[it].size() == 1) && ((*edge).second > 0)) {
 				instruction = getCallInstruction("inc_path_reg",
 						vector<int>{loop_id, (*edge).second}, func_context, module_pointer);
-				instruction->insertBefore((*it)->getTerminator());
-			} else if ((edges[*it].size() > 1) && ((*edge).second > 0)) {
+				instruction->insertBefore((it)->getTerminator());
+			} else if ((edges[it].size() > 1) && ((*edge).second > 0)) {
 				//if more than one outgoing edge then we insert at the beginning
 				//of the next basicblock
 				instruction = getCallInstruction("inc_path_reg",
@@ -230,12 +260,15 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 				instruction->insertBefore((*edge).first->getFirstNonPHI());
 			}
 		}
-		
-		
 	}
 	
+	map<BasicBlock *, bool> discovered;
+	vector<BasicBlock *> dfslist;
+	print_DFS(&edges, topo_order.front(), &discovered, &dfslist, loop_id, 0);
 	
 	
+	//cout << "debug" << edges[loop->getLoopLatch()].size() << endl << flush;
+	//edges[loop->getLoopLatch()].front().first->printAsOperand(outs(), 0);
 	/*for (auto Iter = edges.begin(); Iter != edges.end(); Iter++) {
 		cout << "block number " << flush;
 		Iter->first->print(outs(), 0);
@@ -260,9 +293,9 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 
 void InstrumentPass::getAnalysisUsage(AnalysisUsage &AU) const
 {
-	AU.addRequired<LoopInfoWrapperPass>();
-	AU.addRequired<DominatorTreeWrapperPass>();
-	AU.addRequiredTransitive<DominatorTreeWrapperPass>();
+	//AU.addRequired<LoopInfoWrapperPass>();
+	//AU.addRequired<DominatorTreeWrapperPass>();
+	//AU.addRequiredTransitive<DominatorTreeWrapperPass>();
 	AU.setPreservesCFG();
 	return;
 }

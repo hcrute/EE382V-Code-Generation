@@ -45,7 +45,7 @@ void dump_path_regs() {
 	for (auto loop = path_counts.begin(); loop != path_counts.end(); loop++) {
 		for (auto path = (*loop).second.begin(); path != (*loop).second.end(); path++) {
 			//cout << "path = " << (*path).first;
-			cout << "loop: " << (*loop).first <<
+			cerr << "loop: " << (*loop).first <<
 					"\t path: " << (*path).first << "\t count: " << (*path).second << endl;
 		}
 	}
