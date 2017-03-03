@@ -29,12 +29,12 @@ using namespace std;
 static int loop_id = 1;
 
 // FunctionType *FunTy = FunctionType::get( Type::getVoidTy( MP->getContext() ), ... );
-	// Function *Function = dyn_cast<Function> ( MP->getOrInsertFunction(...) );
-	// APInt LoopId(...);
-	// Value *init_arg_values[] = { Constant::getIntegerValue(...), ... };
-	// CallInst *call = CallInst::Create(...);
-	// call->insertBefore(???->getFirstNonPHI());
-	// call->insertBefore(latch->getTerminator());
+// Function *Function = dyn_cast<Function> ( MP->getOrInsertFunction(...) );
+// APInt LoopId(...);
+// Value *init_arg_values[] = { Constant::getIntegerValue(...), ... };
+// CallInst *call = CallInst::Create(...);
+// call->insertBefore(???->getFirstNonPHI());
+// call->insertBefore(latch->getTerminator());
 
 CallInst *getCallInstruction(string func_name, vector<int> values,
 			LLVMContext &func_context, Module *module_pointer) {
@@ -82,12 +82,28 @@ void print_DFS(map<BasicBlock *, vector<pair<BasicBlock *, int>>> *edges,
 	if ((*edges)[node].empty()) {
 		cout << "loop: " << loopid << "\t path: " << pathid
 				<< "\t " << flush;
-		dfslist->front()->printAsOperand(outs(), 0);
-		for (auto path = dfslist->begin() + 1; path != dfslist->end(); path++) {
-			(*path)->printAsOperand(outs(), 0);
-			cout << "->" << flush;
+		if (dfslist->size() > 0) {
+			StringRef bb_name = dfslist->front()->getName();
+			if (bb_name.size() == 0) {
+				cout << "no name" << flush;
+				dfslist->front()->printAsOperand(outs(), 0);
+			} else {
+				cout << bb_name.str();
+			}
 		}
-		cout << endl;
+		for (auto path = dfslist->begin() + 1; path != dfslist->end(); path++) {
+			cout << "->" << flush;
+			StringRef bb_name = (*path)->getName();
+			if (bb_name.size() == 0) {
+				cout << "no name" << flush;
+				(*path)->printAsOperand(outs(), 0);
+			} else {
+				cout << bb_name.str() << flush;
+			}
+			
+			
+		}
+		cout << endl << flush;
 	}
 	(*discovered)[dfslist->back()] = false;
 	dfslist->pop_back();
@@ -124,12 +140,6 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	//DominatorTree& domTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 	//DomTreeNode *node = domTree.getNode(loop->getLoopLatch());
 
-	
-	/*for (auto it_node = domTree.getNode(loop->getLoopLatch()),
-			  it_head = domTree.getNode(loop->getHeader());
-			  it_node != it_head; ) {
-		break;
-	}*/
 	
 	vector<BasicBlock *> terminators;
 	terminators.push_back(loop->getLoopLatch());
@@ -188,7 +198,6 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	}
 	
 	//assign values to edges in DAG
-	
 	map<BasicBlock *, int> NumPaths;
 	//loop reverse topological order
 	for (unsigned i = topo_order.size(); i-- > 0; ) {
@@ -215,9 +224,7 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	//insert instrumentation into code
 	Module *module_pointer = loop->getHeader()->getParent()->getParent();
 	LLVMContext &func_context = loop->getHeader()->getParent()->getContext();
-	
-
-	//iterate topologically
+	//iterate reverse topological order
 	for (unsigned i = topo_order.size(); i-- > 0; ) {
 		BasicBlock *it = topo_order[i];
 		//(*it)->printAsOperand(outs(), 0);
@@ -266,23 +273,6 @@ bool InstrumentPass::runOnLoop(llvm::Loop* loop, llvm::LPPassManager& lpm)
 	vector<BasicBlock *> dfslist;
 	print_DFS(&edges, topo_order.front(), &discovered, &dfslist, loop_id, 0);
 	
-	
-	//cout << "debug" << edges[loop->getLoopLatch()].size() << endl << flush;
-	//edges[loop->getLoopLatch()].front().first->printAsOperand(outs(), 0);
-	/*for (auto Iter = edges.begin(); Iter != edges.end(); Iter++) {
-		cout << "block number " << flush;
-		Iter->first->print(outs(), 0);
-		cout << endl << flush;
-		
-		auto it = Iter->second.begin();
-		unsigned i = 0;
-		while (it != Iter->second.end()) {
-			(*it).first->printAsOperand(outs(), 0);
-			cout << "has a value of " << (*it).second << endl << flush;
-			it++;
-			i++;
-		}
-	}*/
 	
 	//cout << "size of the ordering is " << topo_order.size() << endl;
 	//cout <<  "total number of blocks = " << loop->getNumBlocks() << endl << flush;
