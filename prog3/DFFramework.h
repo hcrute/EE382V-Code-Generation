@@ -4,9 +4,10 @@
 #define EE382V_DFFramework_H
 
 #include <iostream>
-#include <std>
+#include <set>
 
-using namespace llvm
+using namespace llvm;
+using namespace std;
 
 //the state of the current basic block
 class bb_state {
@@ -24,7 +25,7 @@ private:
     bool mapping;
 public:
     //default init values
-    void meet_operator(const bool map = false);
+    meet_operator(const bool map = false);
     bb_state operate(bb_state state1, bb_state state2);
 };
 
@@ -44,7 +45,7 @@ private:
     
 public:
     //default init values
-    void DFAnalize(const bool dir = false);
+    DFAnalize(const bool dir = false);
     //set some values for analysis
     void DFSet(const bool);
     //get in and out state for a given basic block

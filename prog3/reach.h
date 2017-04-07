@@ -4,7 +4,9 @@
 #ifndef EE382V_REACH_H
 #define EE382V_REACH_H
 
-#include "llvm/Analysis/FunctionPass.h"
+#include "llvm/Pass.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace ee382v
 {

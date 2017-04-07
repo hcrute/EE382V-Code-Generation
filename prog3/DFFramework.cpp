@@ -28,17 +28,18 @@
 //standard library includes
 #include <iostream>
 #include <map>
+#include <set>
 
 //my file includes
 #include "DFFramework.h"
 #include "DataFlowAnnotator.h"
 
-using namespace std
-using namespace llvm
+using namespace std;
+using namespace llvm;
 
 //implementation of dfframework.h
 
-void DFAnalize::DFAnalize(const bool dir) : direction(dir)
+DFAnalize::DFAnalize(const bool dir) : direction(dir)
 {}
 
 //print the current values in dfanalize
@@ -76,7 +77,7 @@ bool DFAnalize::start(Function &F) {
     //use the initialization value of the set to initialize in/out to everything or nothing
     
     //mapping of basic blocks with their state
-    map<BasicBlock&, bb_state&> block_states;
+    //map<BasicBlock&, bb_state&> block_states;
     
     //init all BB's
     if (initial_values > 0) {
@@ -91,5 +92,6 @@ bool DFAnalize::start(Function &F) {
     } else {
         cout << "direction is backward" << endl;
     }
+    return true;
 }
 

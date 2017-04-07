@@ -9,6 +9,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Pass.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
 
@@ -35,7 +37,7 @@ using namespace std;
 //      annotator.print(function);
 
 bool reach::runOnFunction(Function &F) {
-    F->dump();
+    F.dump();
     
     //create gen and kill sets for reaching definitions
     
