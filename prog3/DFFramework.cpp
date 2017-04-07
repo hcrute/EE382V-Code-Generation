@@ -39,7 +39,8 @@ using namespace llvm;
 
 //implementation of dfframework.h
 
-DFAnalize::DFAnalize(const bool dir) : direction(dir)
+DFAnalize::DFAnalize(const bool dir, const int ini) :
+direction(dir), initial_values(ini)
 {}
 
 //print the current values in dfanalize
@@ -54,8 +55,6 @@ void DFAnalize::print() const {
     } else {
         cout << "intial values are 0 for the global set" << endl;
     }
-    
-    
     
 }
 

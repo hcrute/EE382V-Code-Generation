@@ -3,7 +3,6 @@
 
 #define DEBUG_TYPE "reach"
 
-#include "reach.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,8 +20,11 @@
 #include <unordered_map>
 #include <algorithm>
 #include <utility>
-
 #include <iostream>
+
+
+#include "reach.h"
+#include "DFFramework.h"
 
 using namespace ee382v;
 using namespace llvm;
@@ -37,7 +39,7 @@ using namespace std;
 //      annotator.print(function);
 
 bool reach::runOnFunction(Function &F) {
-    F.dump();
+    //F.dump();
     
     //create gen and kill sets for reaching definitions
     
@@ -60,4 +62,4 @@ void reach::getAnalysisUsage(AnalysisUsage &AU) const
 }
 
 char reach::ID = 0;
-static RegisterPass<reach> X("liveness", "Generic Liveness Pass.");
+static RegisterPass<reach> X("reach", "Generic Reaching Definition Pass.");

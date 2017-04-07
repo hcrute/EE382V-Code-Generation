@@ -3,8 +3,6 @@
 
 #define DEBUG_TYPE "live"
 
-#include "live.h"
-
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Dominators.h"
@@ -21,8 +19,10 @@
 #include <unordered_map>
 #include <algorithm>
 #include <utility>
-
 #include <iostream>
+
+#include "live.h"
+#include "DFFramework.h"
 
 using namespace ee382v;
 using namespace llvm;
@@ -38,13 +38,14 @@ using namespace std;
 //      annotator.print(function);
 
 bool live::runOnFunction(Function &F) {
-    F.dump();
+    //F.dump();
     //create gen and kill sets for liveness
     
     //the total data domain for the given function
     
     //create analysis
-    
+    DFAnalize liveness(true, 0);
+    liveness.print();
     
     
     return false;
@@ -60,4 +61,4 @@ void live::getAnalysisUsage(AnalysisUsage &AU) const
 }
 
 char live::ID = 0;
-static RegisterPass<live> X("liveness", "Generic Liveness Pass.");
+static RegisterPass<live> X("live", "Generic Liveness Pass.");

@@ -38,14 +38,14 @@ class DFAnalize {
 
 private:
     bool direction;
-    int boundary_condition;
     int initial_values;
+    int boundary_condition;
     set<int> data_domain;
-    meet_operator op;
+    //meet_operator op;
     
 public:
     //default init values
-    DFAnalize(const bool dir = false);
+    DFAnalize(const bool dir = false, const int ini = 0);
     //set some values for analysis
     void DFSet(const bool);
     //get in and out state for a given basic block
@@ -56,7 +56,6 @@ public:
     void print() const;
     //start analysis
     bool start(Function &F);
-    
     
 };
 
