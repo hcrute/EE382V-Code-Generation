@@ -12,10 +12,10 @@ using namespace std;
 //the state of the current basic block
 class bb_state {
     //todo change
-    set<int> gen;
-    set<int> kill;
-    set<int> in;
-    set<int> out;
+    set<Value *> gen;
+    set<Value *> kill;
+    set<Value *> in;
+    set<Value *> out;
 };
 
 //this is binary and either union or intersect
@@ -34,14 +34,22 @@ public:
     private:
 }*/
 
+/*class live_transfer {
+	;
+};
+
+class reach_transfer {
+	;
+};*/
+
 class DFAnalize {
 
 private:
     bool direction;
     int initial_values;
     int boundary_condition;
-    set<int> data_domain;
-    //meet_operator op;
+    set<Value *> data_domain;
+    meet_operator op;
     
 public:
     //default init values

@@ -45,7 +45,8 @@ bool live::runOnFunction(Function &F) {
     
     //create analysis
     DFAnalize liveness(true, 0);
-    liveness.print();
+    //liveness.print();
+    liveness.start(F);
     
     
     return false;

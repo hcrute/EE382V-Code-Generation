@@ -37,8 +37,20 @@
 using namespace std;
 using namespace llvm;
 
-//implementation of dfframework.h
+//implementation of meet_operator
 
+meet_operator::meet_operator(const bool map) :
+mapping(map)
+{}
+
+//if mappingn is true then union
+//if mapping is false then intersect
+bb_state meet_operator::operate(bb_state state1, bb_state state2) {
+	bb_state result;
+	return result;
+};
+
+//implementation of DFAnalize
 DFAnalize::DFAnalize(const bool dir, const int ini) :
 direction(dir), initial_values(ini)
 {}
@@ -46,14 +58,14 @@ direction(dir), initial_values(ini)
 //print the current values in dfanalize
 void DFAnalize::print() const {
     if (direction) {
-        cout << "direction is forward" << endl;
+        cout << "direction is forward" << endl << flush;
     } else {
-        cout << "direction is backward" << endl;
+        cout << "direction is backward" << endl << flush;
     }
     if (initial_values) {
-        cout << "initial values are 1 for the global set" << endl;
+        cout << "initial values are 1 for the global set" << endl << flush;
     } else {
-        cout << "intial values are 0 for the global set" << endl;
+        cout << "intial values are 0 for the global set" << endl << flush;
     }
     
 }
@@ -78,6 +90,14 @@ bool DFAnalize::start(Function &F) {
     //mapping of basic blocks with their state
     //map<BasicBlock&, bb_state&> block_states;
     
+    //generate data domain and init all BB's
+    for (auto& block: F.getBasicBlockList()) {
+		cout << "some shit \n";
+		block.printAsOperand(outs(), false);
+	}
+    
+    
+    
     //init all BB's
     if (initial_values > 0) {
         
@@ -87,9 +107,9 @@ bool DFAnalize::start(Function &F) {
     
     
     if (direction) {
-        cout << "direction is forward" << endl;
+        cout << "direction is forward" << endl << flush;
     } else {
-        cout << "direction is backward" << endl;
+        cout << "direction is backward" << endl << flush;
     }
     return true;
 }
