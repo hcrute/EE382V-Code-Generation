@@ -24,11 +24,13 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/IR/CFG.h"
 
 //standard library includes
 #include <iostream>
 #include <map>
 #include <set>
+#include <typeinfo>
 
 //my file includes
 #include "DFFramework.h"
@@ -37,23 +39,21 @@
 using namespace std;
 using namespace llvm;
 
-//implementation of meet_operator
-
-meet_operator::meet_operator(const bool map) :
-mapping(map)
-{}
-
-//if mappingn is true then union
-//if mapping is false then intersect
-bb_state meet_operator::operate(bb_state state1, bb_state state2) {
-	bb_state result;
-	return result;
-};
+void printSet(set<Value *> some) {
+	cout << "print set start \n" << flush;
+	for (auto something : some) {
+		something->print(outs(), false);
+		cout << "type is " << something->getType()->getTypeID() << flush;
+		cout << endl << flush;
+	}
+	return;
+}
 
 //implementation of DFAnalize
 DFAnalize::DFAnalize(const bool dir, const int ini) :
 direction(dir), initial_values(ini)
 {}
+
 
 //print the current values in dfanalize
 void DFAnalize::print() const {
@@ -67,7 +67,33 @@ void DFAnalize::print() const {
     } else {
         cout << "intial values are 0 for the global set" << endl << flush;
     }
+    for (auto myblock = block_states.begin(); myblock != block_states.end(); myblock++) {
+		cout << "THIS IS THE BLOCK" << endl << flush;
+		myblock->first->print(outs(), false);
+		
+		cout << "THIS IS THE GEN" << endl << flush;
+		for (auto mygen = myblock->second.gen.begin(); mygen != myblock->second.gen.end(); mygen++) {
+			(*mygen)->print(outs(), false);
+			cout << endl << flush;
+		}
+		
+		cout << "THIS IS THE KILL" << endl << flush;
+		for (auto mykill = myblock->second.kill.begin(); mykill != myblock->second.kill.end(); mykill++) {
+			(*mykill)->print(outs(), false);
+			cout << endl << flush;
+		}
+	}
     
+}
+
+void DFAnalize::setGen(BasicBlock *bb, set<Value *> somevalue) {
+	block_states[bb].gen = somevalue;
+	return;
+}
+
+void DFAnalize::setKill(BasicBlock *bb, set<Value *> somevalue) {
+	block_states[bb].kill = somevalue;
+	return;
 }
 
 //set some values for the analysis
@@ -84,33 +110,135 @@ bb_state& DFAnalize::getOutState(const llvm::BasicBlock& bb) {
 }*/
 
 //start analysis until we converge
+//operands can be value constants, blocks, or instructions
+
+//only track liveness of instruction-defined values and
+//function arguments
+
+
+set<Value *> DFAnalize::getInState(BasicBlock *bb) {
+	return block_states[bb].in;
+}
+
+set<Value *> DFAnalize::getOutState(BasicBlock *bb) {
+	return block_states[bb].out;
+}
+
 bool DFAnalize::start(Function &F) {
     //use the initialization value of the set to initialize in/out to everything or nothing
     
     //mapping of basic blocks with their state
     //map<BasicBlock&, bb_state&> block_states;
-    
+	for (auto& arg: F.getArgumentList()) {
+		data_domain.emplace(&(cast<Value>(arg)));
+	}
     //generate data domain and init all BB's
     for (auto& block: F.getBasicBlockList()) {
-		cout << "some shit \n";
-		block.printAsOperand(outs(), false);
+		for (auto& inst: block.getInstList()) {
+			//unsigned int numOps = inst.getNumOperands();
+			if (inst.getType()->getTypeID() != 0) {
+				data_domain.emplace(&(cast<Value>(inst)));
+			}
+			/*for (unsigned int i = 0; i < numOps; i++) {
+				cout << "this is the operand" << endl << flush;
+				inst.getOperand(i)->print(outs(), false);
+				cout << endl << flush;
+				
+				data_domain.emplace(inst.getOperand(i));
+			}*/
+		}
 	}
     
+    //printSet(data_domain);
     
-    
-    //init all BB's
+    //if we need to init the values to entire data_domain
     if (initial_values > 0) {
-        
-    } else {
-        
+		for (auto& block: F.getBasicBlockList()) {
+			if (direction) {
+				//init out
+				block_states[&block].out.insert(data_domain.begin(), data_domain.end());
+			} else {
+				//init in
+				block_states[&block].in.insert(data_domain.begin(), data_domain.end());
+			}
+		}
     }
     
+    //if forward then we compute in with function and then out with meet
+    if (direction == true) {
+		//compute in
+		for (auto& block: F.getBasicBlockList()) {
+			//block_states[&block].in = ;
+		}
+		
+		//compute out for each bb based on in
+		for (auto& block: F.getBasicBlockList()) {
+			//block.print(outs(), false);
+			//cout << endl << flush;
+			
+			//get list of successors
+			vector<BasicBlock *> after;
+			for (BasicBlock *succ : successors(&block)) {
+				after.push_back(succ);
+			}
+			
+			set<Value *> newOut;
+			if (after.size() == 0) {
+				//cout << "size equals 0" << endl;
+				block_states[&block].out = newOut;
+			} else if (after.size() == 1) {
+				//cout << "size equals 1" << endl;
+				newOut = block_states[after.back()].in;
+				block_states[&block].out = newOut;
+			} else {
+				//cout << "size equals " << after.size() << endl;
+				newOut = block_states[after.back()].in;
+				after.pop_back();
+				while (after.size() != 0) {
+					newOut = meet.operate(newOut, block_states[after.back()].in);
+					after.pop_back();
+					//cout << "did loop \n" << flush;
+				}
+				block_states[&block].out = newOut;
+			}
+		}
+		
+	} else {
+		//compute out
+		for (auto& block: F.getBasicBlockList()) {
+			;
+		}
+		
+		//compute in for each bb based on out
+		for (auto& block: F.getBasicBlockList()) {
+			//list of predecessors
+			vector<BasicBlock *> before;
+			for (BasicBlock *pred : predecessors(&block)) {
+				before.push_back(pred);
+			}
+			
+			set<Value *> newIn;
+			if (before.size() == 0) {
+				//cout << "size equals 0" << endl;
+				block_states[&block].in = newIn;
+			} else if (before.size() == 1) {
+				//cout << "size equals 1" << endl;
+				newIn = block_states[before.back()].out;
+				block_states[&block].in = newIn;
+			} else {
+				//cout << "size equals " << after.size() << endl;
+				newIn = block_states[before.back()].out;
+				before.pop_back();
+				while (before.size() != 0) {
+					newIn = meet.operate(newIn, block_states[before.back()].out);
+					before.pop_back();
+					//cout << "did loop \n" << flush;
+				}
+				block_states[&block].in = newIn;
+			}
+		}
+	}
     
-    if (direction) {
-        cout << "direction is forward" << endl << flush;
-    } else {
-        cout << "direction is backward" << endl << flush;
-    }
     return true;
 }
 

@@ -11,7 +11,8 @@ using namespace std;
 
 //the state of the current basic block
 class bb_state {
-    //todo change
+
+public:
     set<Value *> gen;
     set<Value *> kill;
     set<Value *> in;
@@ -21,35 +22,38 @@ class bb_state {
 //this is binary and either union or intersect
 class meet_operator {
 
-private:
-    bool mapping;
+//private:
+//    bool mapping;
 public:
     //default init values
-    meet_operator(const bool map = false);
-    bb_state operate(bb_state state1, bb_state state2);
+    //meet_operator(const bool map = false);
+    virtual set<Value *> operate(set<Value *> state1, set<Value *> state2)
+		{set<Value *> retValue; return retValue;}
+    meet_operator() {};
+    virtual ~meet_operator() {};
 };
 
 //uses gen/kill/out/in
-/*class transfer_function {
-    private:
-}*/
-
-/*class live_transfer {
-	;
+class transfer_function {
+	
+public:
+	virtual set<Value *> transfer(set<Value *> gen, set<Value *> kill,
+								set<Value *> in, set<Value *> out)
+		{set<Value *> retValue; return retValue;}
+	transfer_function() {};
+	virtual ~transfer_function() {};
 };
-
-class reach_transfer {
-	;
-};*/
 
 class DFAnalize {
 
 private:
     bool direction;
     int initial_values;
-    int boundary_condition;
+    meet_operator meet;
+    transfer_function func;
     set<Value *> data_domain;
-    meet_operator op;
+    set<Value *> boundary_condition;
+    map<BasicBlock *, bb_state> block_states;
     
 public:
     //default init values
@@ -57,8 +61,12 @@ public:
     //set some values for analysis
     void DFSet(const bool);
     //get in and out state for a given basic block
-    set<int>& getOutState(const llvm::BasicBlock& bb);
-    set<int>& getInState(const llvm::BasicBlock& bb);
+    set<Value *> getOutState(BasicBlock *bb);
+    set<Value *> getInState(BasicBlock *bb);
+    
+    //set gen an kill for a block
+    void setGen(BasicBlock *bb, set<Value *> somevalue);
+    void setKill(BasicBlock *bb, set<Value *> somevalue);
     
     //print the variables in DFAnalize
     void print() const;
