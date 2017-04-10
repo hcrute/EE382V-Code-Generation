@@ -51,14 +51,9 @@ void printSet(set<Value *> some) {
 
 //implementation of DFAnalize
 DFAnalize::DFAnalize(const bool dir, const int ini,
-	meet_operator *m, transfer_function *f) :
-direction(dir), initial_values(ini), meet(m), func(f) {
+	meet_operator *m, transfer_function *f, set<Value *> d) :
+direction(dir), initial_values(ini), meet(m), func(f), data_domain(d) {
 	
-	//set<Value *> nothing;
-	//m.operate(nothing, nothing);
-	//meet = m;
-	//func = f;
-	//cout << "plz init\n";
 }
 
 
@@ -129,25 +124,7 @@ bool DFAnalize::start(Function &F) {
     
     //mapping of basic blocks with their state
     //map<BasicBlock&, bb_state&> block_states;
-	for (auto& arg: F.getArgumentList()) {
-		data_domain.emplace(&(cast<Value>(arg)));
-	}
-    //generate data domain and init all BB's
-    for (auto& block: F.getBasicBlockList()) {
-		for (auto& inst: block.getInstList()) {
-			//unsigned int numOps = inst.getNumOperands();
-			if (inst.getType()->getTypeID() != 0) {
-				data_domain.emplace(&(cast<Value>(inst)));
-			}
-			/*for (unsigned int i = 0; i < numOps; i++) {
-				cout << "this is the operand" << endl << flush;
-				inst.getOperand(i)->print(outs(), false);
-				cout << endl << flush;
-				
-				data_domain.emplace(inst.getOperand(i));
-			}*/
-		}
-	}
+	
     
     //printSet(data_domain);
     

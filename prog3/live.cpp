@@ -77,9 +77,22 @@ bool live::runOnFunction(Function &F) {
     live_meet *meetop = new live_meet;
     live_transfer *transfunc = new live_transfer;
     
-    //initialize 
+    set<Value *> domain;
+    //initialize data domain
+    for (auto& arg: F.getArgumentList()) {
+		domain.emplace(&(cast<Value>(arg)));
+	}
+    //generate data domain and init all BB's
+    for (auto& block: F.getBasicBlockList()) {
+		for (auto& inst: block.getInstList()) {
+			//unsigned int numOps = inst.getNumOperands();
+			if (inst.getType()->getTypeID() != 0) {
+				domain.emplace(&(cast<Value>(inst)));
+			}
+		}
+	}
     
-    DFAnalize liveness(true, 0, meetop, transfunc);
+    DFAnalize liveness(true, 0, meetop, transfunc, domain);
     
     //for each basic block in the function, initialize the gen/kill
     for (auto& block: F.getBasicBlockList()) {
@@ -88,22 +101,22 @@ bool live::runOnFunction(Function &F) {
         for (auto& inst: block.getInstList()) {
             if (inst.getType()->getTypeID() != 0) {
 				killSet.emplace(&(cast<Value>(inst)));
-                
-                //cout << "instruction:" << endl;
-                //inst.print(outs(), false);
-                for (auto use = inst.use_begin(); use != inst.use_end(); use++) {
-                    //cout << "\nadding this to kill set\n" << flush;
-                    //(*use)->print(outs(), false);
-                    genSet.emplace((cast<Value>(*use)));
-                }
 			}
-            
+            for (unsigned int opnum = 0; opnum < inst.getNumOperands(); opnum++) {
+                Value *operand = inst.getOperand(opnum);
+                //if we find operand in the set
+                if (domain.find(operand) != domain.end()) {
+                    genSet.emplace(operand);
+                }
+                //cout << "operand is \n" << flush;
+                //inst.getOperand(opnum)->print(outs(), false);
+            }
         }
         liveness.setGen(&block, genSet);
         liveness.setKill(&block, killSet);
     }
     
-    liveness.print();
+    //liveness.print();
     liveness.start(F);
     
     example::DataFlowAnnotator<DFAnalize> annotator(liveness, errs());
