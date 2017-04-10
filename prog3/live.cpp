@@ -24,6 +24,7 @@
 
 #include "live.h"
 #include "DFFramework.h"
+#include "DataFlowAnnotator.h"
 
 using namespace ee382v;
 using namespace llvm;
@@ -56,6 +57,10 @@ public:
                         inserter(diff, diff.begin()));
         set_union(gen.begin(), gen.end(), diff.begin(), diff.end(), 
                         inserter(retValue, retValue.begin()));
+        //cout << "difference = " << endl;
+        //printSet(diff);
+        //cout << "transfer = " << endl;
+        //printSet(retValue);
         return retValue;
     }
 	live_transfer() {};
@@ -67,13 +72,14 @@ public:
 //      annotator.print(function);
 
 bool live::runOnFunction(Function &F) {
-    //F.dump();
-    //create gen and kill sets for liveness
-    
-    //the total data domain for the given function
-    
+    F.dump();
     //create analysis
-    DFAnalize liveness(true, 0);
+    live_meet *meetop = new live_meet;
+    live_transfer *transfunc = new live_transfer;
+    
+    //initialize 
+    
+    DFAnalize liveness(true, 0, meetop, transfunc);
     
     //for each basic block in the function, initialize the gen/kill
     for (auto& block: F.getBasicBlockList()) {
@@ -85,7 +91,7 @@ bool live::runOnFunction(Function &F) {
                 
                 //cout << "instruction:" << endl;
                 //inst.print(outs(), false);
-                for (auto use = inst.user_begin(); use != inst.user_end(); use++) {
+                for (auto use = inst.use_begin(); use != inst.use_end(); use++) {
                     //cout << "\nadding this to kill set\n" << flush;
                     //(*use)->print(outs(), false);
                     genSet.emplace((cast<Value>(*use)));
@@ -97,8 +103,11 @@ bool live::runOnFunction(Function &F) {
         liveness.setKill(&block, killSet);
     }
     
-    //liveness.print();
+    liveness.print();
     liveness.start(F);
+    
+    example::DataFlowAnnotator<DFAnalize> annotator(liveness, errs());
+    annotator.print(F);
     
     
     return false;
@@ -109,6 +118,7 @@ void live::getAnalysisUsage(AnalysisUsage &AU) const
 	//AU.addRequired<LoopInfoWrapperPass>();
 	//AU.addRequired<DominatorTreeWrapperPass>();
 	//AU.addRequiredTransitive<DominatorTreeWrapperPass>();
+    //AU.addRequired
 	AU.setPreservesCFG();
 	return;
 }

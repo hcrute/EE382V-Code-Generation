@@ -50,9 +50,16 @@ void printSet(set<Value *> some) {
 }
 
 //implementation of DFAnalize
-DFAnalize::DFAnalize(const bool dir, const int ini) :
-direction(dir), initial_values(ini)
-{}
+DFAnalize::DFAnalize(const bool dir, const int ini,
+	meet_operator *m, transfer_function *f) :
+direction(dir), initial_values(ini), meet(m), func(f) {
+	
+	//set<Value *> nothing;
+	//m.operate(nothing, nothing);
+	//meet = m;
+	//func = f;
+	//cout << "plz init\n";
+}
 
 
 //print the current values in dfanalize
@@ -101,14 +108,6 @@ void DFAnalize::DFSet(const bool dir) {
     direction = dir;
 }
 
-/*bb_state& DFAnalize::getInState(const llvm::BasicBlock& bb) {
-    ;
-}
-
-bb_state& DFAnalize::getOutState(const llvm::BasicBlock& bb) {
-    ;
-}*/
-
 //start analysis until we converge
 //operands can be value constants, blocks, or instructions
 
@@ -123,6 +122,7 @@ set<Value *> DFAnalize::getInState(BasicBlock *bb) {
 set<Value *> DFAnalize::getOutState(BasicBlock *bb) {
 	return block_states[bb].out;
 }
+
 
 bool DFAnalize::start(Function &F) {
     //use the initialization value of the set to initialize in/out to everything or nothing
@@ -164,77 +164,113 @@ bool DFAnalize::start(Function &F) {
 		}
     }
     
-    //if forward then we compute in with function and then out with meet
-    if (direction == true) {
-		//compute in
-		for (auto& block: F.getBasicBlockList()) {
-			//block_states[&block].in = ;
-		}
-		
-		//compute out for each bb based on in
-		for (auto& block: F.getBasicBlockList()) {
-			//block.print(outs(), false);
-			//cout << endl << flush;
-			
-			//get list of successors
-			vector<BasicBlock *> after;
-			for (BasicBlock *succ : successors(&block)) {
-				after.push_back(succ);
+    bool changed = true;
+    //loop over until we converge
+    while (changed) {
+		//cout << "changed is " << changed << endl;
+		changed = false;
+		//if forward then we compute in with function and then out with meet
+		if (direction == true) {
+			//compute in
+			for (auto& block: F.getBasicBlockList()) {
+				//gen, kill, in, out
+				
+				/*IF STATEMENT THAT USES BOUNDARY CONDITION */
+				bb_state *mystate = &block_states[&block];
+				set<Value *> newIn = func->transfer(mystate->gen, mystate->kill,
+					mystate->in, mystate->out);
+				//printSet(newIn);
+				//check to see if we changed the in set
+				if (newIn != mystate->in) {
+					changed = true;
+					//cout << "before in = ";
+					//printSet(mystate->in);
+					//cout << "after in = ";
+					//printSet(newIn);
+					mystate->in = newIn;
+				}
 			}
 			
-			set<Value *> newOut;
-			if (after.size() == 0) {
-				//cout << "size equals 0" << endl;
-				block_states[&block].out = newOut;
-			} else if (after.size() == 1) {
-				//cout << "size equals 1" << endl;
-				newOut = block_states[after.back()].in;
-				block_states[&block].out = newOut;
-			} else {
-				//cout << "size equals " << after.size() << endl;
-				newOut = block_states[after.back()].in;
-				after.pop_back();
-				while (after.size() != 0) {
-					newOut = meet.operate(newOut, block_states[after.back()].in);
+			//compute out for each bb based on in
+			for (auto& block: F.getBasicBlockList()) {
+				//block.print(outs(), false);
+				//cout << endl << flush;
+				
+				//get list of successors
+				vector<BasicBlock *> after;
+				for (BasicBlock *succ : successors(&block)) {
+					after.push_back(succ);
+				}
+				
+				set<Value *> newOut;
+				if (after.size() == 0) {
+					//cout << "size equals 0" << endl;
+				} else if (after.size() == 1) {
+					//cout << "size equals 1" << endl;
+					newOut = block_states[after.back()].in;
+				} else {
+					//cout << "size equals " << after.size() << endl;
+					newOut = block_states[after.back()].in;
 					after.pop_back();
-					//cout << "did loop \n" << flush;
+					while (after.size() != 0) {
+						newOut = meet->operate(newOut, block_states[after.back()].in);
+						after.pop_back();
+						//cout << "did loop \n" << flush;
+					}
 				}
-				block_states[&block].out = newOut;
-			}
-		}
-		
-	} else {
-		//compute out
-		for (auto& block: F.getBasicBlockList()) {
-			;
-		}
-		
-		//compute in for each bb based on out
-		for (auto& block: F.getBasicBlockList()) {
-			//list of predecessors
-			vector<BasicBlock *> before;
-			for (BasicBlock *pred : predecessors(&block)) {
-				before.push_back(pred);
+				if (newOut != block_states[&block].out) {
+					changed = true;
+					block_states[&block].out = newOut;
+				}
 			}
 			
-			set<Value *> newIn;
-			if (before.size() == 0) {
-				//cout << "size equals 0" << endl;
-				block_states[&block].in = newIn;
-			} else if (before.size() == 1) {
-				//cout << "size equals 1" << endl;
-				newIn = block_states[before.back()].out;
-				block_states[&block].in = newIn;
-			} else {
-				//cout << "size equals " << after.size() << endl;
-				newIn = block_states[before.back()].out;
-				before.pop_back();
-				while (before.size() != 0) {
-					newIn = meet.operate(newIn, block_states[before.back()].out);
-					before.pop_back();
-					//cout << "did loop \n" << flush;
+		} else {
+			//compute out
+			for (auto& block: F.getBasicBlockList()) {
+				
+				/*IF STATEMENT THAT USES BOUNDARY CONDITION */
+				bb_state *mystate = &(block_states[&block]);
+				set<Value *> newOut = func->transfer(mystate->gen, mystate->kill,
+					mystate->in, mystate->out);
+				if (newOut != mystate->out) {
+					changed = true;
+					//cout << "before in = ";
+					//printSet(mystate->in);
+					//cout << "after in = ";
+					//printSet(newIn);
+					mystate->out = newOut;
 				}
-				block_states[&block].in = newIn;
+			}
+			
+			//compute in for each bb based on out
+			for (auto& block: F.getBasicBlockList()) {
+				//list of predecessors
+				vector<BasicBlock *> before;
+				for (BasicBlock *pred : predecessors(&block)) {
+					before.push_back(pred);
+				}
+				
+				set<Value *> newIn;
+				if (before.size() == 0) {
+					//cout << "size equals 0" << endl;
+				} else if (before.size() == 1) {
+					//cout << "size equals 1" << endl;
+					newIn = block_states[before.back()].out;
+				} else {
+					//cout << "size equals " << after.size() << endl;
+					newIn = block_states[before.back()].out;
+					before.pop_back();
+					while (before.size() != 0) {
+						newIn = meet->operate(newIn, block_states[before.back()].out);
+						before.pop_back();
+						//cout << "did loop \n" << flush;
+					}
+				}
+				if (newIn != block_states[&block].in) {
+					changed = true;
+					
+					block_states[&block].in = newIn;
+				}
 			}
 		}
 	}

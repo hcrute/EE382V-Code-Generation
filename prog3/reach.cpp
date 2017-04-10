@@ -54,7 +54,7 @@ public:
 	set<Value *> transfer(set<Value *> gen, set<Value *> kill,
                 set<Value *> in, set<Value *> out) {
         set<Value *> diff, retValue;
-        set_difference(out.begin(), out.end(), kill.begin(), kill.end(), 
+        set_difference(in.begin(), in.end(), kill.begin(), kill.end(), 
                         inserter(diff, diff.begin()));
         set_union(gen.begin(), gen.end(), diff.begin(), diff.end(), 
                         inserter(retValue, retValue.begin()));

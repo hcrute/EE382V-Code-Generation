@@ -36,12 +36,12 @@ private:
 		os << "}";
 	}
 
-	void emitBasicBlockStartAnnot(const llvm::BasicBlock& bb)
+	void emitBasicBlockStartAnnot(llvm::BasicBlock& bb)
 	{
 		printState(analysis.getInState(&bb));
 	}
 
-	void emitBasicBlockEndAnnot(const llvm::BasicBlock& bb)
+	void emitBasicBlockEndAnnot(llvm::BasicBlock& bb)
 	{
 		printState(analysis.getOutState(&bb));
 		os << "\n---\n";
@@ -49,10 +49,10 @@ private:
 public:
 	DataFlowAnnotator(AnalysisType& a, llvm::raw_ostream& o): analysis(a), os(o) {}
 
-	void print(const llvm::Function& f)
+	void print(llvm::Function& f)
 	{
 		os << "\n******  DataFlow Result for function " << f.getName() << "  ******\n";
-		for (auto const& bb: f)
+		for (auto &bb: f)
 		{
 			emitBasicBlockStartAnnot(bb);
 			os << bb;

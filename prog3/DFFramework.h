@@ -9,6 +9,8 @@
 using namespace llvm;
 using namespace std;
 
+void printSet(set<Value *> some);
+
 //the state of the current basic block
 class bb_state {
 
@@ -44,20 +46,24 @@ public:
 	virtual ~transfer_function() {};
 };
 
+
+
 class DFAnalize {
 
 private:
     bool direction;
     int initial_values;
-    meet_operator meet;
-    transfer_function func;
+    meet_operator *meet;
+    transfer_function *func;
     set<Value *> data_domain;
     set<Value *> boundary_condition;
     map<BasicBlock *, bb_state> block_states;
     
 public:
     //default init values
-    DFAnalize(const bool dir = false, const int ini = 0);
+    DFAnalize(const bool dir = false, const int ini = 0,
+		meet_operator *m = new meet_operator,
+		transfer_function *f = new transfer_function);
     //set some values for analysis
     void DFSet(const bool);
     //get in and out state for a given basic block
