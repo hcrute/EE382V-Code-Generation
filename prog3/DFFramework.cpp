@@ -51,8 +51,9 @@ void printSet(set<Value *> some) {
 
 //implementation of DFAnalize
 DFAnalize::DFAnalize(const bool dir, const int ini,
-	meet_operator *m, transfer_function *f, set<Value *> d) :
-direction(dir), initial_values(ini), meet(m), func(f), data_domain(d) {
+	meet_operator *m, transfer_function *f, set<Value *> d, set<Value *> b) :
+direction(dir), initial_values(ini),
+meet(m), func(f), data_domain(d), boundary_condition(b) {
 	
 }
 
@@ -141,18 +142,39 @@ bool DFAnalize::start(Function &F) {
 		}
     }
     
+    //initialize the boundary condition for forward or backward analysis
+    
+    //backward so initialize in of basic block w/o a predecessor (entry)
+    if (direction == true) {
+        for (auto& block: F.getBasicBlockList()) {
+            if (predecessors(&block).size() == 0) {
+                block.in = boundary_condition;
+            }
+        }
+    //forward so initialize out of basic block w/o a successor (exit)
+    } else {
+        for (auto& block: F.getBasicBlockList()) {
+            if (successors(&block).size() == 0) {
+                block.out = boundary_condition;
+            }
+        }
+    }
+    
     bool changed = true;
     //loop over until we converge
     while (changed) {
 		//cout << "changed is " << changed << endl;
 		changed = false;
-		//if forward then we compute in with function and then out with meet
+		//if backward then we compute in with function and then out with meet
 		if (direction == true) {
 			//compute in
 			for (auto& block: F.getBasicBlockList()) {
 				//gen, kill, in, out
+                /*IF STATEMENT THAT USES BOUNDARY CONDITION */
+				if (predecessors(&block).size() == 0) {
+                    continue;
+                }
 				
-				/*IF STATEMENT THAT USES BOUNDARY CONDITION */
 				bb_state *mystate = &block_states[&block];
 				set<Value *> newIn = func->transfer(mystate->gen, mystate->kill,
 					mystate->in, mystate->out);
@@ -200,12 +222,16 @@ bool DFAnalize::start(Function &F) {
 					block_states[&block].out = newOut;
 				}
 			}
-			
+		//forward analysis
 		} else {
 			//compute out
 			for (auto& block: F.getBasicBlockList()) {
 				
 				/*IF STATEMENT THAT USES BOUNDARY CONDITION */
+                if (successors(&block).size() == 0) {
+                    block.out = boundary_condition;
+                }
+                
 				bb_state *mystate = &(block_states[&block]);
 				set<Value *> newOut = func->transfer(mystate->gen, mystate->kill,
 					mystate->in, mystate->out);

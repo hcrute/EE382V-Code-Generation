@@ -64,7 +64,8 @@ public:
     DFAnalize(const bool dir = false, const int ini = 0,
 		meet_operator *m = new meet_operator,
 		transfer_function *f = new transfer_function,
-		set<Value *> domain = *(new set<Value *>));
+		set<Value *> domain = *(new set<Value *>),
+        set<Value *> bound = *(new set<Value *>));
     //set some values for analysis
     void DFSet(const bool);
     //get in and out state for a given basic block
