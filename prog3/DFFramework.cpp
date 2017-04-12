@@ -143,19 +143,20 @@ bool DFAnalize::start(Function &F) {
     }
     
     //initialize the boundary condition for forward or backward analysis
-    
     //backward so initialize in of basic block w/o a predecessor (entry)
     if (direction == true) {
         for (auto& block: F.getBasicBlockList()) {
-            if (predecessors(&block).size() == 0) {
-                block.in = boundary_condition;
+            if (pred_begin(&block) == pred_end(&block)) {
+                cout << "boundary condition set (backward)\n";
+                block_states[&block].in = boundary_condition;
             }
         }
     //forward so initialize out of basic block w/o a successor (exit)
     } else {
         for (auto& block: F.getBasicBlockList()) {
-            if (successors(&block).size() == 0) {
-                block.out = boundary_condition;
+            if (succ_begin(&block) == succ_end(&block)) {
+                cout << "boundary condition set (forward)\n";
+                block_states[&block].out = boundary_condition;
             }
         }
     }
@@ -171,7 +172,7 @@ bool DFAnalize::start(Function &F) {
 			for (auto& block: F.getBasicBlockList()) {
 				//gen, kill, in, out
                 /*IF STATEMENT THAT USES BOUNDARY CONDITION */
-				if (predecessors(&block).size() == 0) {
+				if (pred_begin(&block) == pred_end(&block)) {
                     continue;
                 }
 				
@@ -228,8 +229,8 @@ bool DFAnalize::start(Function &F) {
 			for (auto& block: F.getBasicBlockList()) {
 				
 				/*IF STATEMENT THAT USES BOUNDARY CONDITION */
-                if (successors(&block).size() == 0) {
-                    block.out = boundary_condition;
+                if (succ_begin(&block) == succ_end(&block)) {
+                    continue;
                 }
                 
 				bb_state *mystate = &(block_states[&block]);

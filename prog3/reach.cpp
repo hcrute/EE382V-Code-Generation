@@ -26,6 +26,7 @@
 
 #include "reach.h"
 #include "DFFramework.h"
+#include "DataFlowAnnotator.h"
 
 using namespace ee382v;
 using namespace llvm;
@@ -70,14 +71,47 @@ public:
 
 bool reach::runOnFunction(Function &F) {
     //F.dump();
-    
-    //create gen and kill sets for reaching definitions
-    
-    //the total data domain for the given function
-    
     //create analysis
+    reach_meet *meetop = new reach_meet;
+    reach_transfer *transfunc = new reach_transfer;
     
+    set<Value *> domain;
+    //initialize data domain
+    for (auto& arg: F.getArgumentList()) {
+		domain.emplace(&(cast<Value>(arg)));
+	}
+    //generate data domain and init all BB's
+    for (auto& block: F.getBasicBlockList()) {
+		for (auto& inst: block.getInstList()) {
+			//unsigned int numOps = inst.getNumOperands();
+			if (inst.getType()->getTypeID() != 0) {
+				domain.emplace(&(cast<Value>(inst)));
+			}
+		}
+	}
     
+    DFAnalize reaching(false, 0, meetop, transfunc, domain);
+    
+    //for each basic block in the function, initialize the gen/kill
+    for (auto& block: F.getBasicBlockList()) {
+        set<Value *> genSet;
+        set<Value *> killSet;
+        for (auto& inst: block.getInstList()) {
+            if (inst.getType()->getTypeID() != 0) {
+				killSet.emplace(&(cast<Value>(inst)));
+                genSet.emplace(&(cast<Value>(inst)));
+			}
+        }
+        
+        reaching.setGen(&block, genSet);
+        reaching.setKill(&block, killSet);
+    }
+    
+    reaching.print();
+    reaching.start(F);
+    
+    example::DataFlowAnnotator<DFAnalize> annotator(reaching, errs());
+    //annotator.print(F);
     
     return false;
 }

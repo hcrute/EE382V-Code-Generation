@@ -72,7 +72,7 @@ public:
 //      annotator.print(function);
 
 bool live::runOnFunction(Function &F) {
-    F.dump();
+    //F.dump();
     //create analysis
     live_meet *meetop = new live_meet;
     live_transfer *transfunc = new live_transfer;
@@ -116,11 +116,11 @@ bool live::runOnFunction(Function &F) {
         liveness.setKill(&block, killSet);
     }
     
-    //liveness.print();
+    liveness.print();
     liveness.start(F);
     
     example::DataFlowAnnotator<DFAnalize> annotator(liveness, errs());
-    annotator.print(F);
+    //annotator.print(F);
     
     
     return false;
