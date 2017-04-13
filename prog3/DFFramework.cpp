@@ -143,20 +143,57 @@ bool DFAnalize::start(Function &F) {
     }
     
     //initialize the boundary condition for forward or backward analysis
-    //backward so initialize in of basic block w/o a predecessor (entry)
+    //backward so initialize in of basic block w/o a predecessor (exit)
     if (direction == true) {
         for (auto& block: F.getBasicBlockList()) {
-            if (pred_begin(&block) == pred_end(&block)) {
-                cout << "boundary condition set (backward)\n";
-                block_states[&block].in = boundary_condition;
+            if (succ_begin(&block) == succ_end(&block)) {
+                cout << "boundary condition set (backward)\n" << flush;
+                block_states[&block].out = boundary_condition;
             }
         }
-    //forward so initialize out of basic block w/o a successor (exit)
+    //forward so initialize out of basic block w/o a successor (entry)
     } else {
         for (auto& block: F.getBasicBlockList()) {
-            if (succ_begin(&block) == succ_end(&block)) {
-                cout << "boundary condition set (forward)\n";
-                block_states[&block].out = boundary_condition;
+            if (pred_begin(&block) == pred_end(&block)) {
+                cout << "boundary condition set (forward)\n" << flush;
+                block_states[&block].in = boundary_condition;
+                //block.dump();
+            }
+        }
+    }
+    
+    map<BasicBlock *, vector<Value *>> phi_kill;
+    //get phi instructions
+    for (auto& block: F.getBasicBlockList()) {
+        vector<pair<BasicBlock *, Value *>> phi_list;
+        for (auto& inst: block.getInstList()) {
+            //phi node stuff
+            
+            if (isa<PHINode>(inst)) {
+                PHINode *node = &cast<PHINode>(inst);
+                
+                for (unsigned int i = 0; i < node->getNumIncomingValues(); i++) {
+                    cout << "value " << i << " = \n" << flush;
+                    pair<BasicBlock *, Value *> *mypair = new pair<BasicBlock *, Value *>;
+                    mypair->first = node->getIncomingBlock(i);
+                    mypair->second = node->getIncomingValue(i);
+                    phi_list.push_back(*mypair);
+                    //node->getIncomingValue(i)->dump();
+                    //node->getIncomingBlock(i)->dump();
+                }
+            }
+        }
+        
+        for (auto it = phi_list.begin(); it != phi_list.end(); it++) {
+            BasicBlock *myblock = (*it).first;
+            for (auto jt = phi_list.begin(); jt != phi_list.end(); jt++) {
+                if (myblock != (*jt).first) {
+                    phi_kill[(*jt).first].push_back((*it).second);
+                    //cout << "block is " << flush; 
+                    //(*jt).first->dump();
+                    //cout << "value is " << flush;
+                    //(*it).second->dump();
+                }
             }
         }
     }
@@ -166,15 +203,11 @@ bool DFAnalize::start(Function &F) {
     while (changed) {
 		//cout << "changed is " << changed << endl;
 		changed = false;
-		//if backward then we compute in with function and then out with meet
+		//BACKWARD ANALYSIS
 		if (direction == true) {
 			//compute in
 			for (auto& block: F.getBasicBlockList()) {
 				//gen, kill, in, out
-                /*IF STATEMENT THAT USES BOUNDARY CONDITION */
-				if (pred_begin(&block) == pred_end(&block)) {
-                    continue;
-                }
 				
 				bb_state *mystate = &block_states[&block];
 				set<Value *> newIn = func->transfer(mystate->gen, mystate->kill,
@@ -196,6 +229,11 @@ bool DFAnalize::start(Function &F) {
 				//block.print(outs(), false);
 				//cout << endl << flush;
 				
+                /*IF STATEMENT THAT USES BOUNDARY CONDITION */
+				if (succ_begin(&block) == succ_end(&block)) {
+                    continue;
+                }
+                
 				//get list of successors
 				vector<BasicBlock *> after;
 				for (BasicBlock *succ : successors(&block)) {
@@ -218,36 +256,50 @@ bool DFAnalize::start(Function &F) {
 						//cout << "did loop \n" << flush;
 					}
 				}
+                
+                //we have values to remove from the set
+                for (auto it = phi_kill[&block].begin();
+                    it != phi_kill[&block].end(); it++) {
+                    newOut.erase(*it);
+                }
+                
 				if (newOut != block_states[&block].out) {
 					changed = true;
 					block_states[&block].out = newOut;
 				}
 			}
-		//forward analysis
+		//FORWARD ANALYSIS
 		} else {
 			//compute out
 			for (auto& block: F.getBasicBlockList()) {
-				
-				/*IF STATEMENT THAT USES BOUNDARY CONDITION */
-                if (succ_begin(&block) == succ_end(&block)) {
-                    continue;
-                }
                 
 				bb_state *mystate = &(block_states[&block]);
 				set<Value *> newOut = func->transfer(mystate->gen, mystate->kill,
 					mystate->in, mystate->out);
+                    
+                //we have values to remove from the set
+                /*for (auto it = phi_kill[&block].begin();
+                    it != phi_kill[&block].end(); it++) {
+                    newOut.erase(*it);
+                }*/
+                
 				if (newOut != mystate->out) {
 					changed = true;
-					//cout << "before in = ";
-					//printSet(mystate->in);
-					//cout << "after in = ";
-					//printSet(newIn);
 					mystate->out = newOut;
 				}
+                
+                
+                
 			}
 			
 			//compute in for each bb based on out
 			for (auto& block: F.getBasicBlockList()) {
+                
+                /*IF STATEMENT THAT USES BOUNDARY CONDITION */
+                if (pred_begin(&block) == pred_end(&block)) {
+                    continue;
+                }
+                
 				//list of predecessors
 				vector<BasicBlock *> before;
 				for (BasicBlock *pred : predecessors(&block)) {
@@ -270,6 +322,9 @@ bool DFAnalize::start(Function &F) {
 						//cout << "did loop \n" << flush;
 					}
 				}
+                
+                
+                
 				if (newIn != block_states[&block].in) {
 					changed = true;
 					

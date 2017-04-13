@@ -75,10 +75,11 @@ bool reach::runOnFunction(Function &F) {
     reach_meet *meetop = new reach_meet;
     reach_transfer *transfunc = new reach_transfer;
     
-    set<Value *> domain;
+    set<Value *> domain, boundary;
     //initialize data domain
     for (auto& arg: F.getArgumentList()) {
 		domain.emplace(&(cast<Value>(arg)));
+        boundary.emplace(&(cast<Value>(arg)));
 	}
     //generate data domain and init all BB's
     for (auto& block: F.getBasicBlockList()) {
@@ -90,7 +91,7 @@ bool reach::runOnFunction(Function &F) {
 		}
 	}
     
-    DFAnalize reaching(false, 0, meetop, transfunc, domain);
+    DFAnalize reaching(false, 0, meetop, transfunc, domain, boundary);
     
     //for each basic block in the function, initialize the gen/kill
     for (auto& block: F.getBasicBlockList()) {
@@ -107,11 +108,11 @@ bool reach::runOnFunction(Function &F) {
         reaching.setKill(&block, killSet);
     }
     
-    reaching.print();
+    //reaching.print();
     reaching.start(F);
     
     example::DataFlowAnnotator<DFAnalize> annotator(reaching, errs());
-    //annotator.print(F);
+    annotator.print(F);
     
     return false;
 }

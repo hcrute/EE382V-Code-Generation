@@ -104,9 +104,13 @@ bool live::runOnFunction(Function &F) {
 			}
             for (unsigned int opnum = 0; opnum < inst.getNumOperands(); opnum++) {
                 Value *operand = inst.getOperand(opnum);
-                //if we find operand in the set
+                //if we find operand in the set of total values
                 if (domain.find(operand) != domain.end()) {
-                    genSet.emplace(operand);
+                    //if we don't find the current operand in the kill set
+                    if (killSet.find(operand) == killSet.end()) {
+                        genSet.emplace(operand);
+                    }
+                    
                 }
                 //cout << "operand is \n" << flush;
                 //inst.getOperand(opnum)->print(outs(), false);
@@ -116,11 +120,11 @@ bool live::runOnFunction(Function &F) {
         liveness.setKill(&block, killSet);
     }
     
-    liveness.print();
+    //liveness.print();
     liveness.start(F);
     
     example::DataFlowAnnotator<DFAnalize> annotator(liveness, errs());
-    //annotator.print(F);
+    annotator.print(F);
     
     
     return false;
