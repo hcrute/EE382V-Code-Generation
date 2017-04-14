@@ -147,7 +147,7 @@ bool DFAnalize::start(Function &F) {
     if (direction == true) {
         for (auto& block: F.getBasicBlockList()) {
             if (succ_begin(&block) == succ_end(&block)) {
-                cout << "boundary condition set (backward)\n" << flush;
+                //cout << "boundary condition set (backward)\n" << flush;
                 block_states[&block].out = boundary_condition;
             }
         }
@@ -155,14 +155,15 @@ bool DFAnalize::start(Function &F) {
     } else {
         for (auto& block: F.getBasicBlockList()) {
             if (pred_begin(&block) == pred_end(&block)) {
-                cout << "boundary condition set (forward)\n" << flush;
+                //cout << "boundary condition set (forward)\n" << flush;
                 block_states[&block].in = boundary_condition;
                 //block.dump();
             }
         }
     }
     
-    map<BasicBlock *, vector<Value *>> phi_kill;
+    map<BasicBlock *, vector<Value *>> back_phi_kill;
+    map<BasicBlock *, vector<Value *>> forward_phi_kill;
     //get phi instructions
     for (auto& block: F.getBasicBlockList()) {
         vector<pair<BasicBlock *, Value *>> phi_list;
@@ -173,22 +174,32 @@ bool DFAnalize::start(Function &F) {
                 PHINode *node = &cast<PHINode>(inst);
                 
                 for (unsigned int i = 0; i < node->getNumIncomingValues(); i++) {
-                    cout << "value " << i << " = \n" << flush;
+                    //cout << "value " << i << " = \n" << flush;
                     pair<BasicBlock *, Value *> *mypair = new pair<BasicBlock *, Value *>;
                     mypair->first = node->getIncomingBlock(i);
                     mypair->second = node->getIncomingValue(i);
                     phi_list.push_back(*mypair);
+                    
+                    Value *inc_value = node->getIncomingValue(i);
+                    if (isa<Instruction>(inc_value) || isa<Argument>(inc_value)) {
+                        forward_phi_kill[&block].push_back(node->getIncomingValue(i));
+                        //cout << "pushing" << flush;
+                        //inst.dump();
+                        //node->getIncomingValue(i)->dump();
+                    }
                     //node->getIncomingValue(i)->dump();
                     //node->getIncomingBlock(i)->dump();
                 }
             }
         }
         
+        
+        
         for (auto it = phi_list.begin(); it != phi_list.end(); it++) {
             BasicBlock *myblock = (*it).first;
             for (auto jt = phi_list.begin(); jt != phi_list.end(); jt++) {
                 if (myblock != (*jt).first) {
-                    phi_kill[(*jt).first].push_back((*it).second);
+                    back_phi_kill[(*jt).first].push_back((*it).second);
                     //cout << "block is " << flush; 
                     //(*jt).first->dump();
                     //cout << "value is " << flush;
@@ -197,6 +208,8 @@ bool DFAnalize::start(Function &F) {
             }
         }
     }
+    
+    
     
     bool changed = true;
     //loop over until we converge
@@ -258,8 +271,8 @@ bool DFAnalize::start(Function &F) {
 				}
                 
                 //we have values to remove from the set
-                for (auto it = phi_kill[&block].begin();
-                    it != phi_kill[&block].end(); it++) {
+                for (auto it = back_phi_kill[&block].begin();
+                    it != back_phi_kill[&block].end(); it++) {
                     newOut.erase(*it);
                 }
                 
@@ -277,11 +290,10 @@ bool DFAnalize::start(Function &F) {
 				set<Value *> newOut = func->transfer(mystate->gen, mystate->kill,
 					mystate->in, mystate->out);
                     
-                //we have values to remove from the set
-                /*for (auto it = phi_kill[&block].begin();
-                    it != phi_kill[&block].end(); it++) {
+                for (auto it = forward_phi_kill[&block].begin();
+                    it != forward_phi_kill[&block].end(); it++) {
                     newOut.erase(*it);
-                }*/
+                }
                 
 				if (newOut != mystate->out) {
 					changed = true;
