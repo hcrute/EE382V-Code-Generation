@@ -1,0 +1,71 @@
+
+******  DataFlow Result for function main  ******
+{ }
+entry:
+  %retval = alloca i32, align 4
+  %i = alloca i32, align 4
+  %sum = alloca i32, align 4
+  %B = alloca [10 x i32], align 16
+  store i32 0, i32* %retval, align 4
+  store i32 9, i32* %i, align 4
+  br label %do.body
+{ i sum B }
+---
+{ i sum B }
+do.body:                                          ; preds = %do.cond, %entry
+  %0 = load i32, i32* %i, align 4
+  %idxprom = sext i32 %0 to i64
+  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* @A, i64 0, i64 %idxprom
+  %1 = load i32, i32* %arrayidx, align 4
+  %cmp = icmp slt i32 %1, 0
+  br i1 %cmp, label %if.then, label %if.else
+{ i sum B }
+---
+{ i sum B }
+if.then:                                          ; preds = %do.body
+  %2 = load i32, i32* %i, align 4
+  %idxprom1 = sext i32 %2 to i64
+  %arrayidx2 = getelementptr inbounds [10 x i32], [10 x i32]* %B, i64 0, i64 %idxprom1
+  %3 = load i32, i32* %arrayidx2, align 4
+  %add = add nsw i32 %3, 1
+  %4 = load i32, i32* %i, align 4
+  %idxprom3 = sext i32 %4 to i64
+  %arrayidx4 = getelementptr inbounds [10 x i32], [10 x i32]* @A, i64 0, i64 %idxprom3
+  store i32 %add, i32* %arrayidx4, align 4
+  br label %if.end
+{ i sum B }
+---
+{ i sum B }
+if.else:                                          ; preds = %do.body
+  store i32 1, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @A, i64 0, i64 0), align 16
+  br label %if.end
+{ i sum B }
+---
+{ i sum B }
+if.end:                                           ; preds = %if.else, %if.then
+  %5 = load i32, i32* %i, align 4
+  %idxprom5 = sext i32 %5 to i64
+  %arrayidx6 = getelementptr inbounds [10 x i32], [10 x i32]* %B, i64 0, i64 %idxprom5
+  %6 = load i32, i32* %arrayidx6, align 4
+  %7 = load i32, i32* %sum, align 4
+  %add7 = add nsw i32 %7, %6
+  store i32 %add7, i32* %sum, align 4
+  %8 = load i32, i32* %i, align 4
+  %sub = sub nsw i32 %8, 1
+  store i32 %sub, i32* %i, align 4
+  br label %do.cond
+{ i sum B }
+---
+{ i sum B }
+do.cond:                                          ; preds = %if.end
+  %9 = load i32, i32* %i, align 4
+  %cmp8 = icmp sge i32 %9, 0
+  br i1 %cmp8, label %do.body, label %do.end
+{ i sum B }
+---
+{ }
+do.end:                                           ; preds = %do.cond
+  %10 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @A, i64 0, i64 3), align 4
+  ret i32 %10
+{ }
+---

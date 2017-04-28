@@ -1,0 +1,56 @@
+
+******  DataFlow Result for function array  ******
+{ c len ptr }
+entry:
+  %ptr.addr = alloca i32*, align 8
+  %len.addr = alloca i32, align 4
+  %c.addr = alloca i32, align 4
+  %a = alloca [10 x i32], align 16
+  %i = alloca i32, align 4
+  store i32* %ptr, i32** %ptr.addr, align 8
+  store i32 %len, i32* %len.addr, align 4
+  store i32 %c, i32* %c.addr, align 4
+  store i32 0, i32* %i, align 4
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+{ c len ptr.addr ptr len.addr c.addr a i }
+---
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc }
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %1 = load i32, i32* %len.addr, align 4
+  %cmp = icmp slt i32 %0, %1
+  br i1 %cmp, label %for.body, label %for.end
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc }
+---
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc }
+for.body:                                         ; preds = %for.cond
+  %2 = load i32, i32* %i, align 4
+  %rem = srem i32 %2, 10
+  %idxprom = sext i32 %rem to i64
+  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %a, i64 0, i64 %idxprom
+  %3 = load i32, i32* %arrayidx, align 4
+  %4 = load i32, i32* %c.addr, align 4
+  %add = add nsw i32 %3, %4
+  %5 = load i32, i32* %i, align 4
+  %idxprom1 = sext i32 %5 to i64
+  %6 = load i32*, i32** %ptr.addr, align 8
+  %arrayidx2 = getelementptr inbounds i32, i32* %6, i64 %idxprom1
+  store i32 %add, i32* %arrayidx2, align 4
+  br label %for.inc
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc }
+---
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc }
+for.inc:                                          ; preds = %for.body
+  %7 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %7, 1
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc }
+---
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc }
+for.end:                                          ; preds = %for.cond
+  %8 = load i32, i32* %i, align 4
+  ret i32 %8
+{ c len ptr.addr ptr len.addr rem idxprom arrayidx c.addr a i   cmp    add  idxprom1  arrayidx2  inc  }
+---

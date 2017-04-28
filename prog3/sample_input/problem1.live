@@ -1,0 +1,99 @@
+
+******  DataFlow Result for function main  ******
+{ }
+entry:
+  %retval = alloca i32, align 4
+  %s3 = alloca i32, align 4
+  %s5 = alloca i32, align 4
+  %s15 = alloca i32, align 4
+  %i = alloca i32, align 4
+  store i32 0, i32* %retval, align 4
+  store i32 0, i32* %s3, align 4
+  store i32 0, i32* %s5, align 4
+  store i32 0, i32* %s15, align 4
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %0, 1000
+  br i1 %cmp, label %for.body, label %for.end
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+for.body:                                         ; preds = %for.cond
+  %1 = load i32, i32* %i, align 4
+  %rem = srem i32 %1, 3
+  %cmp1 = icmp eq i32 %rem, 0
+  br i1 %cmp1, label %if.then, label %if.end
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+if.then:                                          ; preds = %for.body
+  %2 = load i32, i32* %i, align 4
+  %3 = load i32, i32* %s3, align 4
+  %add = add nsw i32 %3, %2
+  store i32 %add, i32* %s3, align 4
+  br label %if.end
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+if.end:                                           ; preds = %if.then, %for.body
+  %4 = load i32, i32* %i, align 4
+  %rem2 = srem i32 %4, 5
+  %cmp3 = icmp eq i32 %rem2, 0
+  br i1 %cmp3, label %if.then4, label %if.end6
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+if.then4:                                         ; preds = %if.end
+  %5 = load i32, i32* %i, align 4
+  %6 = load i32, i32* %s5, align 4
+  %add5 = add nsw i32 %6, %5
+  store i32 %add5, i32* %s5, align 4
+  br label %if.end6
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+if.end6:                                          ; preds = %if.then4, %if.end
+  %7 = load i32, i32* %i, align 4
+  %rem7 = srem i32 %7, 15
+  %cmp8 = icmp eq i32 %rem7, 0
+  br i1 %cmp8, label %if.then9, label %if.end11
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+if.then9:                                         ; preds = %if.end6
+  %8 = load i32, i32* %i, align 4
+  %9 = load i32, i32* %s15, align 4
+  %add10 = add nsw i32 %9, %8
+  store i32 %add10, i32* %s15, align 4
+  br label %if.end11
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+if.end11:                                         ; preds = %if.then9, %if.end6
+  br label %for.inc
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 i }
+for.inc:                                          ; preds = %if.end11
+  %10 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %10, 1
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond
+{ s3 s5 s15 i }
+---
+{ s3 s5 s15 }
+for.end:                                          ; preds = %for.cond
+  %11 = load i32, i32* %s3, align 4
+  %12 = load i32, i32* %s5, align 4
+  %add12 = add nsw i32 %11, %12
+  %13 = load i32, i32* %s15, align 4
+  %sub = sub nsw i32 %add12, %13
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %sub)
+  ret i32 0
+{ }
+---

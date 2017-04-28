@@ -1,0 +1,39 @@
+
+******  DataFlow Result for function magic  ******
+{ b f a }
+entry:
+  %retval = alloca i32, align 4
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  %f.addr = alloca i32 (i32, i32)*, align 8
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  store i32 (i32, i32)* %f, i32 (i32, i32)** %f.addr, align 8
+  %0 = load i32, i32* %b.addr, align 4
+  %cmp = icmp sgt i32 %0, 0
+  br i1 %cmp, label %if.then, label %if.end
+{ b f b.addr f.addr a.addr a retval  cmp }
+---
+{ b f b.addr f.addr a.addr a retval  cmp }
+if.then:                                          ; preds = %entry
+  %1 = load i32 (i32, i32)*, i32 (i32, i32)** %f.addr, align 8
+  %2 = load i32, i32* %a.addr, align 4
+  %call = call i32 %1(i32 %2, i32 0)
+  store i32 %call, i32* %retval, align 4
+  br label %return
+{ b f b.addr f.addr a.addr a retval  cmp   call }
+---
+{ b f b.addr f.addr a.addr a retval  cmp }
+if.end:                                           ; preds = %entry
+  %3 = load i32, i32* %a.addr, align 4
+  %call1 = call i32 @add(i32 %3, i32 1)
+  store i32 %call1, i32* %retval, align 4
+  br label %return
+{ b f b.addr f.addr a.addr a retval call1  cmp  }
+---
+{ b f b.addr f.addr a.addr a retval call1  cmp   call  }
+return:                                           ; preds = %if.end, %if.then
+  %4 = load i32, i32* %retval, align 4
+  ret i32 %4
+{ b f b.addr f.addr a.addr a retval call1  cmp   call   }
+---

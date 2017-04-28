@@ -1,0 +1,29 @@
+
+******  DataFlow Result for function magic  ******
+{ b f a }
+entry:
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  %f.addr = alloca i32 (i32, i32)*, align 8
+  %env = alloca [1 x %struct.__jmp_buf_tag], align 16
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  store i32 (i32, i32)* %f, i32 (i32, i32)** %f.addr, align 8
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %env, i32 0, i32 0
+  %call = call i32 @_setjmp(%struct.__jmp_buf_tag* %arraydecay) #3
+  %cmp = icmp eq i32 %call, 1
+  br i1 %cmp, label %if.then, label %if.end
+{ b f b.addr a.addr a f.addr env arraydecay call cmp }
+---
+{ b f b.addr a.addr a f.addr env arraydecay call cmp }
+if.then:                                          ; preds = %entry
+  ret i32 0
+{ b f b.addr a.addr a f.addr env arraydecay call cmp }
+---
+{ b f b.addr a.addr a f.addr env arraydecay call cmp }
+if.end:                                           ; preds = %entry
+  %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %env, i32 0, i32 0
+  call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #4
+  unreachable
+{ b f b.addr a.addr a f.addr env arraydecay call cmp arraydecay1 }
+---

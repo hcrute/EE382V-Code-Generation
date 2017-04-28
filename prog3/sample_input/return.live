@@ -1,0 +1,63 @@
+
+******  DataFlow Result for function returnX  ******
+{ b a }
+entry:
+  %retval = alloca i32, align 4
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  %x = alloca i32, align 4
+  %y = alloca i32, align 4
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  %0 = load i32, i32* %a.addr, align 4
+  %1 = load i32, i32* %b.addr, align 4
+  %add = add nsw i32 %0, %1
+  store i32 %add, i32* %x, align 4
+  %2 = load i32, i32* %x, align 4
+  %3 = load i32, i32* %a.addr, align 4
+  %add1 = add nsw i32 %2, %3
+  store i32 %add1, i32* %y, align 4
+  %4 = load i32, i32* %a.addr, align 4
+  %cmp = icmp sgt i32 %4, 0
+  br i1 %cmp, label %if.then, label %if.end
+{ retval x y }
+---
+{ retval y }
+if.then:                                          ; preds = %entry
+  %5 = load i32, i32* %y, align 4
+  %call = call i32 @ex(i32 %5)
+  store i32 %call, i32* %retval, align 4
+  br label %return
+{ retval }
+---
+{ retval x }
+if.end:                                           ; preds = %entry
+  %6 = load i32, i32* %x, align 4
+  %call2 = call i32 @ex(i32 %6)
+  store i32 %call2, i32* %x, align 4
+  %7 = load i32, i32* %x, align 4
+  %cmp3 = icmp sgt i32 %7, 0
+  br i1 %cmp3, label %if.then4, label %if.end6
+{ retval x }
+---
+{ retval }
+if.then4:                                         ; preds = %if.end
+  %call5 = call i32 @ex(i32 0)
+  store i32 %call5, i32* %retval, align 4
+  br label %return
+{ retval }
+---
+{ retval x }
+if.end6:                                          ; preds = %if.end
+  %8 = load i32, i32* %x, align 4
+  %call7 = call i32 @ex(i32 %8)
+  store i32 %call7, i32* %retval, align 4
+  br label %return
+{ retval }
+---
+{ retval }
+return:                                           ; preds = %if.end6, %if.then4, %if.then
+  %9 = load i32, i32* %retval, align 4
+  ret i32 %9
+{ }
+---

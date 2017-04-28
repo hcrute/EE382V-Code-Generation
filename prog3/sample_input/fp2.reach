@@ -1,0 +1,51 @@
+
+******  DataFlow Result for function magic  ******
+{ b f a }
+entry:
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  %f.addr = alloca i32 (i32, i32)*, align 8
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  store i32 (i32, i32)* %f, i32 (i32, i32)** %f.addr, align 8
+  %0 = load i32, i32* %b.addr, align 4
+  %cmp = icmp sgt i32 %0, 0
+  br i1 %cmp, label %if.then, label %if.else
+{ b f f.addr a.addr b.addr a  cmp }
+---
+{ b f f.addr a.addr b.addr a  cmp }
+if.then:                                          ; preds = %entry
+  %1 = load i32 (i32, i32)*, i32 (i32, i32)** %f.addr, align 8
+  %2 = load i32, i32* %a.addr, align 4
+  %3 = load i32, i32* %a.addr, align 4
+  %call = call i32 %1(i32 %2, i32 %3)
+  br label %if.end4
+{ b f f.addr a.addr b.addr a  cmp    call }
+---
+{ b f f.addr a.addr b.addr a  cmp }
+if.else:                                          ; preds = %entry
+  %4 = load i32, i32* %b.addr, align 4
+  %cmp1 = icmp eq i32 %4, 0
+  br i1 %cmp1, label %if.then2, label %if.end
+{ b f f.addr a.addr b.addr a cmp1  cmp  }
+---
+{ b f f.addr a.addr b.addr a cmp1  cmp  }
+if.then2:                                         ; preds = %if.else
+  %call3 = call i32 @add(i32 0, i32 0)
+  br label %if.end
+{ b f f.addr a.addr b.addr a cmp1  cmp  call3 }
+---
+{ b f f.addr a.addr b.addr a cmp1  cmp  call3 }
+if.end:                                           ; preds = %if.then2, %if.else
+  br label %if.end4
+{ b f f.addr a.addr b.addr a cmp1  cmp  call3 }
+---
+{ b f f.addr a.addr b.addr a cmp1  cmp    call  call3 }
+if.end4:                                          ; preds = %if.end, %if.then
+  %5 = load i32 (i32, i32)*, i32 (i32, i32)** %f.addr, align 8
+  %6 = load i32, i32* %b.addr, align 4
+  %7 = load i32, i32* %b.addr, align 4
+  %call5 = call i32 %5(i32 %6, i32 %7)
+  ret i32 %call5
+{ b f f.addr a.addr b.addr a cmp1  cmp    call  call3    call5 }
+---

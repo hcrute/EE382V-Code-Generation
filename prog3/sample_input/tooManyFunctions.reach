@@ -1,0 +1,171 @@
+
+******  DataFlow Result for function factor  ******
+{ n }
+entry:
+  %retval = alloca i32, align 4
+  %n.addr = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32, i32* %n.addr, align 4
+  %cmp = icmp eq i32 %0, 0
+  br i1 %cmp, label %if.then, label %if.else
+{ n.addr  retval n cmp }
+---
+{ n.addr  retval n cmp }
+if.then:                                          ; preds = %entry
+  store i32 1, i32* %retval, align 4
+  br label %return
+{ n.addr  retval n cmp }
+---
+{ n.addr  retval n cmp }
+if.else:                                          ; preds = %entry
+  %1 = load i32, i32* %n.addr, align 4
+  %2 = load i32, i32* %n.addr, align 4
+  %sub = sub nsw i32 %2, 1
+  %call = call i32 @factor(i32 %sub)
+  %mul = mul nsw i32 %1, %call
+  store i32 %mul, i32* %retval, align 4
+  br label %return
+{ n.addr  call mul retval n cmp   sub }
+---
+{ n.addr  call mul retval n cmp   sub }
+return:                                           ; preds = %if.else, %if.then
+  %3 = load i32, i32* %retval, align 4
+  ret i32 %3
+{ n.addr  call mul retval n cmp   sub  }
+---
+
+******  DataFlow Result for function recursive1  ******
+{ a }
+entry:
+  %retval = alloca i32, align 4
+  %a.addr = alloca i32, align 4
+  store i32 %a, i32* %a.addr, align 4
+  %0 = load i32, i32* %a.addr, align 4
+  %rem = srem i32 %0, 2
+  %cmp = icmp eq i32 %rem, 0
+  br i1 %cmp, label %if.then, label %if.else
+{ a retval a.addr  rem cmp }
+---
+{ a retval a.addr  rem cmp }
+if.then:                                          ; preds = %entry
+  %1 = load i32, i32* %a.addr, align 4
+  %call = call i32 @recursive2(i32 %1)
+  store i32 %call, i32* %retval, align 4
+  br label %return
+{ a retval a.addr  rem cmp  call }
+---
+{ a retval a.addr  rem cmp }
+if.else:                                          ; preds = %entry
+  %2 = load i32, i32* %a.addr, align 4
+  %3 = load i32, i32* %a.addr, align 4
+  %sub = sub nsw i32 %3, 1
+  %call1 = call i32 @recursive2(i32 %sub)
+  %add = add nsw i32 %2, %call1
+  store i32 %add, i32* %retval, align 4
+  br label %return
+{ a retval a.addr  rem cmp   sub call1 add }
+---
+{ a retval a.addr  rem cmp  call   sub call1 add }
+return:                                           ; preds = %if.else, %if.then
+  %4 = load i32, i32* %retval, align 4
+  ret i32 %4
+{ a retval a.addr  rem cmp  call   sub call1 add  }
+---
+
+******  DataFlow Result for function recursive2  ******
+{ a }
+entry:
+  %retval = alloca i32, align 4
+  %a.addr = alloca i32, align 4
+  store i32 %a, i32* %a.addr, align 4
+  %0 = load i32, i32* %a.addr, align 4
+  %rem = srem i32 %0, 2
+  %cmp = icmp ne i32 %rem, 0
+  br i1 %cmp, label %if.then, label %if.else
+{ a retval a.addr  rem cmp }
+---
+{ a retval a.addr  rem cmp }
+if.then:                                          ; preds = %entry
+  %1 = load i32, i32* %a.addr, align 4
+  %call = call i32 @recursive1(i32 %1)
+  store i32 %call, i32* %retval, align 4
+  br label %return
+{ a retval a.addr  rem cmp  call }
+---
+{ a retval a.addr  rem cmp }
+if.else:                                          ; preds = %entry
+  %2 = load i32, i32* %a.addr, align 4
+  %3 = load i32, i32* %a.addr, align 4
+  %sub = sub nsw i32 %3, 1
+  %call1 = call i32 @recursive1(i32 %sub)
+  %add = add nsw i32 %2, %call1
+  store i32 %add, i32* %retval, align 4
+  br label %return
+{ a retval a.addr  rem cmp   sub call1 add }
+---
+{ a retval a.addr  rem cmp  call   sub call1 add }
+return:                                           ; preds = %if.else, %if.then
+  %4 = load i32, i32* %retval, align 4
+  ret i32 %4
+{ a retval a.addr  rem cmp  call   sub call1 add  }
+---
+
+******  DataFlow Result for function start  ******
+{ fp a b }
+entry:
+  %fp.addr = alloca i32 (i32, i32)*, align 8
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  store i32 (i32, i32)* %fp, i32 (i32, i32)** %fp.addr, align 8
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  %0 = load i32 (i32, i32)*, i32 (i32, i32)** %fp.addr, align 8
+  %1 = load i32, i32* %a.addr, align 4
+  %2 = load i32, i32* %b.addr, align 4
+  %call = call i32 %0(i32 %1, i32 %2)
+  ret i32 %call
+{ fp a b fp.addr a.addr b.addr    call }
+---
+
+******  DataFlow Result for function add  ******
+{ a b }
+entry:
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  %0 = load i32, i32* %a.addr, align 4
+  %1 = load i32, i32* %b.addr, align 4
+  %add = add nsw i32 %0, %1
+  ret i32 %add
+{ a b a.addr b.addr   add }
+---
+
+******  DataFlow Result for function sub  ******
+{ a b }
+entry:
+  %a.addr = alloca i32, align 4
+  %b.addr = alloca i32, align 4
+  store i32 %a, i32* %a.addr, align 4
+  store i32 %b, i32* %b.addr, align 4
+  %0 = load i32, i32* %a.addr, align 4
+  %1 = load i32, i32* %b.addr, align 4
+  %sub = sub nsw i32 %0, %1
+  ret i32 %sub
+{ a b a.addr b.addr   sub }
+---
+
+******  DataFlow Result for function main  ******
+{ }
+entry:
+  %retval = alloca i32, align 4
+  %magic = alloca i32 (i32, i32)*, align 8
+  store i32 0, i32* %retval, align 4
+  %call = call i32 @factor(i32 10)
+  %call1 = call i32 @recursive1(i32 15)
+  store i32 (i32, i32)* @add, i32 (i32, i32)** %magic, align 8
+  %0 = load i32 (i32, i32)*, i32 (i32, i32)** %magic, align 8
+  %call2 = call i32 @start(i32 (i32, i32)* %0, i32 1, i32 2)
+  ret i32 0
+{ retval magic call call1  call2 }
+---

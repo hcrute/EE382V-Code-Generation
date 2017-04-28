@@ -1,0 +1,43 @@
+
+******  DataFlow Result for function f  ******
+{ s1 s }
+entry:
+  %s.addr = alloca i32, align 4
+  %s1.addr = alloca i32, align 4
+  %i = alloca i32, align 4
+  store i32 %s, i32* %s.addr, align 4
+  store i32 %s1, i32* %s1.addr, align 4
+  store i32 0, i32* %i, align 4
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+{ s.addr s1 i s s1.addr }
+---
+{ s.addr s1 i s s1.addr   cmp  call  inc }
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %1 = load i32, i32* %s.addr, align 4
+  %cmp = icmp slt i32 %0, %1
+  br i1 %cmp, label %for.body, label %for.end
+{ s.addr s1 i s s1.addr   cmp  call  inc }
+---
+{ s.addr s1 i s s1.addr   cmp  call  inc }
+for.body:                                         ; preds = %for.cond
+  %2 = load i32, i32* %i, align 4
+  %call = call i32 @extra(i32 %2)
+  br label %for.inc
+{ s.addr s1 i s s1.addr   cmp  call  inc }
+---
+{ s.addr s1 i s s1.addr   cmp  call  inc }
+for.inc:                                          ; preds = %for.body
+  %3 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %3, 1
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond
+{ s.addr s1 i s s1.addr   cmp  call  inc }
+---
+{ s.addr s1 i s s1.addr   cmp  call  inc }
+for.end:                                          ; preds = %for.cond
+  %4 = load i32, i32* %i, align 4
+  ret i32 %4
+{ s.addr s1 i s s1.addr    cmp  call  inc }
+---
